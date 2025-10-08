@@ -106,8 +106,39 @@ public class UserQualificationService : IUserQualificationService
 
     public async Task<bool> CanUserReviewResultsAsync(string employeeId, short testId, int sampleId)
     {
+        _logger.LogDebug("Checking review permission for employee {EmployeeId}, test {TestId}, sample {SampleId}", 
+            employeeId, testId, sampleId);
+
+        // Get user qualification
         var qualification = await GetUserQualificationAsync(employeeId, testId);
-        return qualification.CanReview;
+        
+        // If user has no review capabilities at all, return false immediately
+        if (!qualification.CanReview && !qualification.CanReviewOwn)
+        {
+            _logger.LogDebug("Employee {EmployeeId} has no review capabilities for test {TestId}", employeeId, testId);
+            return false;
+        }
+
+        // Fetch the test reading to check ownership
+        var testReading = await _context.TestReadings
+            .FirstOrDefaultAsync(tr => tr.SampleId == sampleId && tr.TestId == testId);
+
+        // If test reading doesn't exist, defensively return false
+        if (testReading == null)
+        {
+            _logger.LogWarning("Test reading not found for sample {SampleId}, test {TestId}", sampleId, testId);
+            return false;
+        }
+
+        // Check if employee is the owner of the test result
+        bool isOwner = testReading.EntryId == employeeId;
+
+        _logger.LogDebug("Employee {EmployeeId} is owner: {IsOwner}, CanReview: {CanReview}, CanReviewOwn: {CanReviewOwn}",
+            employeeId, isOwner, qualification.CanReview, qualification.CanReviewOwn);
+
+        // If employee is the owner, they can only review if they have CanReviewOwn permission
+        // If employee is not the owner, they can review if they have CanReview permission
+        return isOwner ? qualification.CanReviewOwn : qualification.CanReview;
     }
 
     public async Task<object> GetUserQualificationSummaryAsync(string userId)
