@@ -16,9 +16,9 @@ public static class StatusManagementEndpoints
 
         // Get test status
         group.MapGet("/test/{sampleId:int}/{testId:int}", 
-            async (int sampleId, short testId, [FromServices] ITestResultService service) =>
+            async (int sampleId, int testId, [FromServices] ITestResultService service) =>
             {
-                var status = await service.GetTestStatusAsync(sampleId, testId);
+                var status = await service.GetTestStatusAsync(sampleId, (short)testId);
                 return Results.Ok(status);
             })
             .WithName("GetTestStatus")
@@ -43,9 +43,9 @@ public static class StatusManagementEndpoints
 
         // Get test workflow
         group.MapGet("/workflow/{testId:int}", 
-            async (short testId, ITestResultService service) =>
+            async (int testId, ITestResultService service) =>
             {
-                var workflow = await service.GetTestWorkflowAsync(testId);
+                var workflow = await service.GetTestWorkflowAsync((short)testId);
                 return Results.Ok(workflow);
             })
             .WithName("GetTestWorkflow")
@@ -56,9 +56,9 @@ public static class StatusManagementEndpoints
 
         // Get save status
         group.MapGet("/save/{sampleId:int}/{testId:int}", 
-            async (int sampleId, short testId, [FromServices] ITestResultService service) =>
+            async (int sampleId, int testId, [FromServices] ITestResultService service) =>
             {
-                var status = await service.GetSaveStatusAsync(sampleId, testId);
+                var status = await service.GetSaveStatusAsync(sampleId, (short)testId);
                 return Results.Ok(status);
             })
             .WithName("GetSaveStatus")
