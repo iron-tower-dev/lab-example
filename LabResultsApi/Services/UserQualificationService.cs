@@ -181,12 +181,12 @@ public class UserQualificationService : IUserQualificationService
         var testStandIds = qualifications.Select(q => q.TestStandId).Where(id => id.HasValue).Select(id => id.Value).ToList();
 
         var tests = await _context.Tests
-            .Where(t => testStandIds.Contains(t.TestStandId ?? 0))
+            .Where(t => t.Id.HasValue && testStandIds.Contains(t.TestStandId ?? 0))
             .Select(t => new TestInfoDto
             {
-                Id = t.Id ?? 0,
+                Id = t.Id.Value,
                 Name = t.Name,
-                Description = null, // Not available in database
+                Description = t.Name, // Use Name as description since Description field doesn't exist in Test model
                 Abbrev = t.Abbrev,
                 ShortAbbrev = t.ShortAbbrev,
                 TestStandId = t.TestStandId,
@@ -196,7 +196,7 @@ public class UserQualificationService : IUserQualificationService
                 GroupName = t.GroupName,
                 Lab = t.Lab,
                 Schedule = t.Schedule,
-                IsActive = true // Assume active if in database
+                IsActive = string.IsNullOrEmpty(t.Exclude) || t.Exclude != "Y" // Active if not explicitly excluded
             })
             .ToListAsync();
 
@@ -209,12 +209,12 @@ public class UserQualificationService : IUserQualificationService
         var qualifiedTestIds = qualifiedTests.Select(t => t.Id).ToList();
 
         var allTests = await _context.Tests
-            .Where(t => !qualifiedTestIds.Contains(t.Id ?? 0))
+            .Where(t => t.Id.HasValue && !qualifiedTestIds.Contains(t.Id.Value))
             .Select(t => new TestInfoDto
             {
-                Id = t.Id ?? 0,
+                Id = t.Id.Value,
                 Name = t.Name,
-                Description = null, // Not available in database
+                Description = t.Name, // Use Name as description since Description field doesn't exist in Test model
                 Abbrev = t.Abbrev,
                 ShortAbbrev = t.ShortAbbrev,
                 TestStandId = t.TestStandId,
@@ -224,7 +224,7 @@ public class UserQualificationService : IUserQualificationService
                 GroupName = t.GroupName,
                 Lab = t.Lab,
                 Schedule = t.Schedule,
-                IsActive = true // Assume active if in database
+                IsActive = string.IsNullOrEmpty(t.Exclude) || t.Exclude != "Y" // Active if not explicitly excluded
             })
             .ToListAsync();
 
