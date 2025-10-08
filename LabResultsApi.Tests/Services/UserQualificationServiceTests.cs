@@ -5,6 +5,7 @@ using Xunit;
 using LabResultsApi.Data;
 using LabResultsApi.Services;
 using LabResultsApi.DTOs;
+using LabResultsApi.Models;
 using System.Threading.Tasks;
 using System.Linq;
 

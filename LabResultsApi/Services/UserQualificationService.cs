@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using LabResultsApi.Data;
 using LabResultsApi.DTOs;
 using LabResultsApi.Models;
@@ -8,20 +9,26 @@ namespace LabResultsApi.Services;
 public class UserQualificationService : IUserQualificationService
 {
     private readonly LabResultsDbContext _context;
+    private readonly ILogger<UserQualificationService> _logger;
 
-    public UserQualificationService(LabResultsDbContext context)
+    public UserQualificationService(LabResultsDbContext context, ILogger<UserQualificationService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     public async Task<UserQualificationDto> GetUserQualificationAsync(string employeeId, short testId)
     {
-        // Get user qualification from LubeTechQualification table
-        var qualification = await _context.LubeTechQualifications
-            .FirstOrDefaultAsync(lq => lq.EmployeeId == employeeId);
+        _logger.LogDebug("Getting qualification for employee {EmployeeId} and test {TestId}", employeeId, testId);
 
-        if (qualification == null)
+        // First, resolve the test's TestStandId
+        var test = await _context.Tests
+            .FirstOrDefaultAsync(t => t.Id == testId);
+
+        // If test doesn't exist or has no TestStandId, return default "no qualification" DTO
+        if (test == null || test.TestStandId == null)
         {
+            _logger.LogWarning("Test {TestId} not found or has no TestStandId for employee {EmployeeId}", testId, employeeId);
             return new UserQualificationDto
             {
                 EmployeeId = employeeId,
@@ -38,20 +45,50 @@ public class UserQualificationService : IUserQualificationService
             };
         }
 
+        var testStandId = test.TestStandId.Value;
+
+        _logger.LogDebug("Looking up qualification for employee {EmployeeId} and TestStandId {TestStandId}", employeeId, testStandId);
+
+        // Get user qualification filtered by both EmployeeId and TestStandId
+        var qualification = await _context.LubeTechQualifications
+            .FirstOrDefaultAsync(lq => lq.EmployeeId == employeeId && lq.TestStandId == testStandId);
+
+        if (qualification == null)
+        {
+            _logger.LogInformation("No qualification found for employee {EmployeeId} on TestStandId {TestStandId} (Test {TestId})", employeeId, testStandId, testId);
+            return new UserQualificationDto
+            {
+                EmployeeId = employeeId,
+                TestId = testId,
+                TestStandId = testStandId,
+                TestStand = "Unknown",
+                QualificationLevel = "None",
+                QualificationDate = DateTime.MinValue,
+                ExpiryDate = null,
+                IsExpired = true,
+                CanEnter = false,
+                CanReview = false,
+                CanReviewOwn = false
+            };
+        }
+
         // Get test stand information
         var testStand = await _context.TestStands
-            .FirstOrDefaultAsync(ts => ts.Id == qualification.TestStandId);
+            .FirstOrDefaultAsync(ts => ts.Id == testStandId);
 
         // Determine capabilities based on qualification level
         var canEnter = qualification.QualificationLevel == "Q" || qualification.QualificationLevel == "QAG";
         var canReview = qualification.QualificationLevel == "QAG" || qualification.QualificationLevel == "MicrE";
         var canReviewOwn = qualification.QualificationLevel == "Q" || qualification.QualificationLevel == "QAG" || qualification.QualificationLevel == "MicrE";
 
+        _logger.LogDebug("Found qualification {QualLevel} for employee {EmployeeId} on TestStandId {TestStandId} (Test {TestId})", 
+            qualification.QualificationLevel, employeeId, testStandId, testId);
+
         return new UserQualificationDto
         {
             EmployeeId = employeeId,
             TestId = testId,
-            TestStandId = qualification.TestStandId ?? 0,
+            TestStandId = testStandId,
             TestStand = testStand?.Name ?? "Unknown",
             QualificationLevel = qualification.QualificationLevel ?? "None",
             QualificationDate = DateTime.MinValue, // Not available in database
