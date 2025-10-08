@@ -77,9 +77,7 @@ public class UserQualificationService : IUserQualificationService
             .FirstOrDefaultAsync(ts => ts.Id == testStandId);
 
         // Determine capabilities based on qualification level
-        var canEnter = qualification.QualificationLevel == "Q" || qualification.QualificationLevel == "QAG";
-        var canReview = qualification.QualificationLevel == "QAG" || qualification.QualificationLevel == "MicrE";
-        var canReviewOwn = qualification.QualificationLevel == "Q" || qualification.QualificationLevel == "QAG" || qualification.QualificationLevel == "MicrE";
+        var capabilities = GetCapabilitiesForQualification(qualification.QualificationLevel);
 
         _logger.LogDebug("Found qualification {QualLevel} for employee {EmployeeId} on TestStandId {TestStandId} (Test {TestId})", 
             qualification.QualificationLevel, employeeId, testStandId, testId);
@@ -94,9 +92,9 @@ public class UserQualificationService : IUserQualificationService
             QualificationDate = DateTime.MinValue, // Not available in database
             ExpiryDate = null, // Not available in database
             IsExpired = false, // Assume not expired if qualification exists
-            CanEnter = canEnter,
-            CanReview = canReview,
-            CanReviewOwn = canReviewOwn
+            CanEnter = capabilities.CanEnter,
+            CanReview = capabilities.CanReview,
+            CanReviewOwn = capabilities.CanReviewOwn
         };
     }
 
@@ -120,13 +118,17 @@ public class UserQualificationService : IUserQualificationService
 
         var testStands = await _context.TestStands.ToListAsync();
 
-        var summary = qualifications.Select(q => new
+        var summary = qualifications.Select(q =>
         {
-            TestStandId = q.TestStandId,
-            TestStand = testStands.FirstOrDefault(ts => ts.Id == q.TestStandId)?.Name ?? "Unknown",
-            QualificationLevel = q.QualificationLevel,
-            CanEnter = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG",
-            CanReview = q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE"
+            var capabilities = GetCapabilitiesForQualification(q.QualificationLevel);
+            return new
+            {
+                TestStandId = q.TestStandId,
+                TestStand = testStands.FirstOrDefault(ts => ts.Id == q.TestStandId)?.Name ?? "Unknown",
+                QualificationLevel = q.QualificationLevel,
+                CanEnter = capabilities.CanEnter,
+                CanReview = capabilities.CanReview
+            };
         }).ToList();
 
         return new
@@ -220,19 +222,23 @@ public class UserQualificationService : IUserQualificationService
         var testStand = await _context.TestStands
             .FirstOrDefaultAsync(ts => ts.Id == testStandId);
 
-        return qualifications.Select(q => new UserQualificationDto
+        return qualifications.Select(q =>
         {
-            EmployeeId = q.EmployeeId ?? "",
-            TestId = 0, // Not specific to a test
-            TestStandId = testStandId,
-            TestStand = testStand?.Name ?? "Unknown",
-            QualificationLevel = q.QualificationLevel ?? "None",
-            QualificationDate = DateTime.MinValue, // Not available in database
-            ExpiryDate = null, // Not available in database
-            IsExpired = false, // Assume not expired if qualification exists
-            CanEnter = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG",
-            CanReview = q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE",
-            CanReviewOwn = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE"
+            var capabilities = GetCapabilitiesForQualification(q.QualificationLevel);
+            return new UserQualificationDto
+            {
+                EmployeeId = q.EmployeeId ?? "",
+                TestId = 0, // Not specific to a test
+                TestStandId = testStandId,
+                TestStand = testStand?.Name ?? "Unknown",
+                QualificationLevel = q.QualificationLevel ?? "None",
+                QualificationDate = DateTime.MinValue, // Not available in database
+                ExpiryDate = null, // Not available in database
+                IsExpired = false, // Assume not expired if qualification exists
+                CanEnter = capabilities.CanEnter,
+                CanReview = capabilities.CanReview,
+                CanReviewOwn = capabilities.CanReviewOwn
+            };
         }).ToList();
     }
 
@@ -250,12 +256,23 @@ public class UserQualificationService : IUserQualificationService
             TestStandId = q.TestStandId,
             TestStand = testStands.FirstOrDefault(ts => ts.Id == q.TestStandId)?.Name ?? "Unknown",
             QualificationLevel = q.QualificationLevel,
-            Capabilities = new
-            {
-                CanEnter = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG",
-                CanReview = q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE",
-                CanReviewOwn = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE"
-            }
+            Capabilities = GetCapabilitiesForQualification(q.QualificationLevel)
         }).Cast<object>().ToList();
+    }
+
+    /// <summary>
+    /// Determines user capabilities based on qualification level.
+    /// </summary>
+    /// <param name="qualificationLevel">The qualification level (Q, QAG, MicrE, TRAIN, etc.)</param>
+    /// <returns>A tuple containing CanEnter, CanReview, and CanReviewOwn flags</returns>
+    private (bool CanEnter, bool CanReview, bool CanReviewOwn) GetCapabilitiesForQualification(string? qualificationLevel)
+    {
+        return qualificationLevel switch
+        {
+            "Q" => (CanEnter: true, CanReview: false, CanReviewOwn: true),
+            "QAG" => (CanEnter: true, CanReview: true, CanReviewOwn: true),
+            "MicrE" => (CanEnter: false, CanReview: true, CanReviewOwn: true),
+            _ => (CanEnter: false, CanReview: false, CanReviewOwn: false)
+        };
     }
 }
