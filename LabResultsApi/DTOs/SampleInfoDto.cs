@@ -41,9 +41,9 @@ public class UserQualificationDto
     public int TestStandId { get; set; }
     public string TestStand { get; set; } = string.Empty;
     public string QualificationLevel { get; set; } = string.Empty;
-    public DateTime QualificationDate { get; set; }
+    public DateTime? QualificationDate { get; set; } // null = unknown/not available
     public DateTime? ExpiryDate { get; set; }
-    public bool IsExpired { get; set; }
+    public bool? IsExpired { get; set; } // null = unknown, computed from ExpiryDate when available
     public bool CanEnter { get; set; }
     public bool CanReview { get; set; }
     public bool CanReviewOwn { get; set; }
