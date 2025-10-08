@@ -12,4 +12,5 @@ public class OilContentTestDto
     public double? OilContent { get; set; }
     public string? Comments { get; set; }
     public string Status { get; set; } = "S";
+    public string? EntryId { get; set; }
 }

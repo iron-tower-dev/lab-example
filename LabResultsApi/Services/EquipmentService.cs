@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using LabResultsApi.Data;
 using LabResultsApi.DTOs;
+using LabResultsApi.Models;
 
 namespace LabResultsApi.Services;
 
@@ -16,7 +17,7 @@ public class EquipmentService : IEquipmentService
     public async Task<List<EquipmentDto>> GetEquipmentByTypeAsync(string equipmentType, short? testId = null)
     {
         var query = _context.MAndTEquips
-            .Where(e => e.EquipType == equipmentType && (e.Exclude != true));
+            .Where(e => e.EquipType == equipmentType && e.Exclude != true);
 
         if (testId.HasValue)
         {
@@ -27,135 +28,166 @@ public class EquipmentService : IEquipmentService
 
         return equipment.Select(e => new EquipmentDto
         {
-            Name = e.EquipName,
-            EquipmentType = e.EquipType ?? string.Empty,
-            DueDate = e.DueDate,
-            IsOverdue = e.DueDate.HasValue && e.DueDate.Value < DateTime.UtcNow.AddDays(29),
-            IsExcluded = e.Exclude == true,
-            TestId = e.TestId,
-            Value1 = e.Val1,
-            Value2 = e.Val2
+            Id = e.Id,
+            Name = e.EquipName ?? "",
+            EquipmentType = e.EquipType,
+            SerialNumber = null, // Not available in database
+            DueDate = e.DueDate ?? DateTime.MaxValue,
+            IsOverdue = e.DueDate.HasValue && e.DueDate.Value < DateTime.Now,
+            IsExcluded = e.Exclude ?? false,
+            TestId = e.TestId ?? 0,
+            Value1 = e.Val1?.ToString(),
+            Value2 = e.Val2?.ToString(),
+            Comments = e.Comments
         }).ToList();
-    }
-
-    public async Task<List<EquipmentDto>> GetViscometersAsync(string lubeType, short testId)
-    {
-        // Get required tube size for the lubricant
-        var lubricant = await _context.Lubricants
-            .FirstOrDefaultAsync(l => l.Type == lubeType);
-
-        var requiredSize = testId == 50 ? lubricant?.TubeSizeVis40 : lubricant?.TubeSizeVis100;
-
-        var viscometers = await _context.MAndTEquips
-            .Where(e => e.EquipType == "VISCOMETER" && 
-                       e.TestId == testId && 
-                       (e.Exclude != true))
-            .OrderByDescending(e => e.Val2)
-            .ToListAsync();
-
-        return viscometers.Select(e => new EquipmentDto
-        {
-            Name = e.EquipName,
-            EquipmentType = "VISCOMETER",
-            DueDate = e.DueDate,
-            IsOverdue = e.DueDate.HasValue && e.DueDate.Value < DateTime.UtcNow.AddDays(29),
-            IsExcluded = e.Exclude == true,
-            TestId = e.TestId,
-            Value1 = e.Val1,
-            Value2 = e.Val2
-        }).ToList();
-    }
-
-    public async Task<List<EquipmentDto>> GetCommentsByAreaAsync(string area)
-    {
-        var comments = await _context.Comments
-            .Where(c => c.Area == area)
-            .ToListAsync();
-
-        return comments.Select(c => new EquipmentDto
-        {
-            Name = c.Remark ?? string.Empty,
-            EquipmentType = "COMMENT"
-        }).ToList();
-    }
-
-    private static string FormatEquipmentDisplayText(Models.MAndTEquip equipment)
-    {
-        var displayText = equipment.EquipName;
-        
-        if (equipment.DueDate.HasValue)
-        {
-            var dueDate = equipment.DueDate.Value;
-            var isOverdue = dueDate < DateTime.UtcNow.AddDays(29);
-            var suffix = isOverdue ? "*" : "";
-            displayText += $" ({dueDate:MM/dd/yyyy}{suffix})";
-        }
-        else
-        {
-            displayText += " (no date)";
-        }
-
-        return displayText;
-    }
-
-    private static string GetViscometerSuffix(string? actualSize, short? requiredSize)
-    {
-        if (string.IsNullOrEmpty(actualSize) || !requiredSize.HasValue)
-            return string.Empty;
-
-        if (int.TryParse(actualSize, out var actual) && int.TryParse(requiredSize.ToString(), out var required))
-        {
-            if (actual > required)
-                return "**";
-            if (actual == required)
-                return "*";
-        }
-
-        return string.Empty;
     }
 
     public async Task<List<EquipmentDto>> GetEquipmentForTestAsync(short testId)
     {
         var equipment = await _context.MAndTEquips
-            .Where(e => e.TestId == testId && (e.Exclude != true))
+            .Where(e => e.TestId == testId && e.Exclude != true)
             .ToListAsync();
 
         return equipment.Select(e => new EquipmentDto
         {
-            Name = e.EquipName,
-            EquipmentType = e.EquipType ?? string.Empty,
-            DueDate = e.DueDate,
-            IsOverdue = e.DueDate.HasValue && e.DueDate.Value < DateTime.UtcNow.AddDays(29),
-            IsExcluded = e.Exclude == true,
-            TestId = e.TestId,
-            Value1 = e.Val1,
-            Value2 = e.Val2
+            Id = e.Id,
+            Name = e.EquipName ?? "",
+            EquipmentType = e.EquipType,
+            SerialNumber = null, // Not available in database
+            DueDate = e.DueDate ?? DateTime.MaxValue,
+            IsOverdue = e.DueDate.HasValue && e.DueDate.Value < DateTime.Now,
+            IsExcluded = e.Exclude ?? false,
+            TestId = e.TestId ?? 0,
+            Value1 = e.Val1?.ToString(),
+            Value2 = e.Val2?.ToString(),
+            Comments = e.Comments
+        }).ToList();
+    }
+
+    public async Task<List<EquipmentDto>> GetViscometersAsync(string lubeType, short testId)
+    {
+        // Get viscometers for viscosity tests
+        var viscometers = await _context.MAndTEquips
+            .Where(e => e.EquipType == "VISCOMETER" && 
+                       e.TestId == testId && 
+                       e.Exclude != true)
+            .ToListAsync();
+
+        return viscometers.Select(e => new EquipmentDto
+        {
+            Id = e.Id,
+            Name = e.EquipName ?? "",
+            EquipmentType = e.EquipType,
+            SerialNumber = null, // Not available in database
+            DueDate = e.DueDate ?? DateTime.MaxValue,
+            IsOverdue = e.DueDate.HasValue && e.DueDate.Value < DateTime.Now,
+            IsExcluded = e.Exclude ?? false,
+            TestId = e.TestId ?? 0,
+            Value1 = e.Val1?.ToString(),
+            Value2 = e.Val2?.ToString(),
+            Comments = e.Comments
+        }).ToList();
+    }
+
+    public async Task<List<EquipmentDto>> GetCommentsByAreaAsync(string area)
+    {
+        // This would typically filter by area, but since we don't have area information
+        // in the database, we'll return equipment with comments
+        var equipment = await _context.MAndTEquips
+            .Where(e => !string.IsNullOrEmpty(e.Comments) && e.Exclude != true)
+            .ToListAsync();
+
+        return equipment.Select(e => new EquipmentDto
+        {
+            Id = e.Id,
+            Name = e.EquipName ?? "",
+            EquipmentType = e.EquipType,
+            SerialNumber = null, // Not available in database
+            DueDate = e.DueDate ?? DateTime.MaxValue,
+            IsOverdue = e.DueDate.HasValue && e.DueDate.Value < DateTime.Now,
+            IsExcluded = e.Exclude ?? false,
+            TestId = e.TestId ?? 0,
+            Value1 = e.Val1?.ToString(),
+            Value2 = e.Val2?.ToString(),
+            Comments = e.Comments
         }).ToList();
     }
 
     public async Task<List<EquipmentDto>> GetOverdueEquipmentAsync()
     {
         var overdueEquipment = await _context.MAndTEquips
-            .Where(e => e.DueDate.HasValue && e.DueDate.Value < DateTime.UtcNow && (e.Exclude != true))
+            .Where(e => e.DueDate.HasValue && 
+                       e.DueDate.Value < DateTime.Now && 
+                       e.Exclude != true)
             .ToListAsync();
 
         return overdueEquipment.Select(e => new EquipmentDto
         {
-            Name = e.EquipName,
-            EquipmentType = e.EquipType ?? string.Empty,
-            DueDate = e.DueDate,
+            Id = e.Id,
+            Name = e.EquipName ?? "",
+            EquipmentType = e.EquipType,
+            SerialNumber = null, // Not available in database
+            DueDate = e.DueDate ?? DateTime.MaxValue,
             IsOverdue = true,
-            IsExcluded = e.Exclude == true,
-            TestId = e.TestId,
-            Value1 = e.Val1,
-            Value2 = e.Val2
+            IsExcluded = e.Exclude ?? false,
+            TestId = e.TestId ?? 0,
+            Value1 = e.Val1?.ToString(),
+            Value2 = e.Val2?.ToString(),
+            Comments = e.Comments
         }).ToList();
     }
 
     public async Task<object> ValidateEquipmentSelectionAsync(int equipmentId, short testId)
     {
-        // Note: MAndTEquip doesn't have an Id property, so this method needs to be reimplemented
-        // For now, return a placeholder response
-        return new { IsValid = true, Message = "Equipment validation not implemented" };
+        var equipment = await _context.MAndTEquips
+            .FirstOrDefaultAsync(e => e.Id == equipmentId);
+
+        if (equipment == null)
+        {
+            return new
+            {
+                IsValid = false,
+                Message = "Equipment not found",
+                EquipmentId = equipmentId,
+                TestId = testId
+            };
+        }
+
+        if (equipment.Exclude == true)
+        {
+            return new
+            {
+                IsValid = false,
+                Message = "Equipment is excluded from use",
+                EquipmentId = equipmentId,
+                TestId = testId
+            };
+        }
+
+        if (equipment.TestId.HasValue && equipment.TestId.Value != testId)
+        {
+            return new
+            {
+                IsValid = false,
+                Message = "Equipment is not suitable for this test",
+                EquipmentId = equipmentId,
+                TestId = testId
+            };
+        }
+
+        var isOverdue = equipment.DueDate.HasValue && equipment.DueDate.Value < DateTime.Now;
+
+        return new
+        {
+            IsValid = true,
+            Message = isOverdue ? "Equipment is overdue for calibration" : "Equipment is valid",
+            EquipmentId = equipmentId,
+            TestId = testId,
+            EquipmentName = equipment.EquipName,
+            EquipmentType = equipment.EquipType,
+            IsOverdue = isOverdue,
+            DueDate = equipment.DueDate,
+            Warnings = isOverdue ? new[] { "Equipment calibration is overdue" } : new string[0]
+        };
     }
 }

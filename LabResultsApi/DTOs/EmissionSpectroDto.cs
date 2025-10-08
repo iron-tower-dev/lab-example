@@ -3,8 +3,8 @@ namespace LabResultsApi.DTOs;
 public class EmissionSpectroDto
 {
     public int SampleId { get; set; }
-    public int TestId { get; set; }
-    public int TrialNumber { get; set; }
+    public short TestId { get; set; }
+    public short TrialNumber { get; set; }
     
     // Element concentrations
     public double? Na { get; set; }

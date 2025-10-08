@@ -12,4 +12,6 @@ public class DInchTestDto
     public double? DInch { get; set; }
     public string? Comments { get; set; }
     public string Status { get; set; } = "S";
+    public double? DInchValue { get; set; }
+    public string? EntryId { get; set; }
 }

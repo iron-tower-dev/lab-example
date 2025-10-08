@@ -1,6 +1,7 @@
 using LabResultsApi.DTOs;
 using LabResultsApi.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace LabResultsApi.Endpoints;
@@ -15,7 +16,7 @@ public static class SampleEndpoints
 
         // Get sample information
         group.MapGet("/{sampleId:int}", 
-            async (int sampleId, ITestResultService service) =>
+            async (int sampleId, [FromServices] ITestResultService service) =>
             {
                 var sample = await service.GetSampleInfoAsync(sampleId);
                 if (sample == null)

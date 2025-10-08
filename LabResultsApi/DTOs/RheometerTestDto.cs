@@ -3,8 +3,8 @@ namespace LabResultsApi.DTOs;
 public class RheometerTestDto
 {
     public int SampleId { get; set; }
-    public int TestId { get; set; }
-    public int TrialNumber { get; set; }
+    public short TestId { get; set; }
+    public short TrialNumber { get; set; }
     public double? DInch { get; set; } // For Test ID 284
     public double? OilContent { get; set; } // For Test ID 285
     public double? VarnishPotentialRating { get; set; } // For Test ID 286

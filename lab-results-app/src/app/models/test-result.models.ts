@@ -66,12 +66,21 @@ export interface UserQualification {
 }
 
 export interface Equipment {
-    name: string;
-    value?: string;
-    displayText?: string;
-    dueDate?: Date;
+    id: number;
+    equipType: string;
+    equipName: string;
+    exclude: boolean;
+    testId: number;
+    dueDate: Date | null;
+    comments: string | null;
+    val1: number | null;
+    val2: number | null;
+    val3: number | null;
+    val4: number | null;
     isOverdue: boolean;
     suffix?: string;
+    name?: string; // For backward compatibility
+    displayText?: string; // For backward compatibility
 }
 
 export interface ParticleType {

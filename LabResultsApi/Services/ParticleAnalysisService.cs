@@ -16,135 +16,113 @@ public class ParticleAnalysisService : IParticleAnalysisService
 
     public async Task<List<ParticleTypeDto>> GetParticleTypesAsync(int sampleId, short testId)
     {
-        var particleTypes = await _context.ParticleTypeDefinitions
-            .Where(ptd => ptd.Active == true)
-            .OrderBy(ptd => ptd.SortOrder)
+        var particleTypes = await _context.ParticleTypes
+            .Where(pt => pt.SampleId == sampleId && pt.TestId == testId)
+            .Include(pt => pt.ParticleTypeDefinition)
+            .Include(pt => pt.ParticleSubTypes)
+                .ThenInclude(pst => pst.ParticleSubTypeCategoryDefinition)
             .ToListAsync();
 
-        var result = new List<ParticleTypeDto>();
-
-        foreach (var pt in particleTypes)
+        return particleTypes.Select(pt => new ParticleTypeDto
         {
-            var existingParticleType = await _context.ParticleTypes
-                .FirstOrDefaultAsync(pt => pt.SampleId == sampleId && 
-                                          pt.TestId == testId && 
-                                          pt.ParticleTypeDefinitionId == pt.Id);
-
-            var subTypes = await GetParticleSubTypesAsync(sampleId, testId, pt.Id);
-
-            result.Add(new ParticleTypeDto
+            SampleId = pt.SampleId,
+            TestId = pt.TestId,
+            ParticleTypeDefinitionId = pt.ParticleTypeDefinitionId,
+            ParticleTypeName = pt.ParticleTypeDefinition?.Name ?? "Unknown",
+            Status = pt.Status ?? "X",
+            Comments = pt.Comments,
+            SubTypes = pt.ParticleSubTypes.Select(pst => new ParticleSubTypeDto
             {
-                SampleId = sampleId,
-                TestId = testId,
-                ParticleTypeDefinitionId = pt.Id,
-                Type = pt.Type ?? string.Empty,
-                Description = pt.Description ?? string.Empty,
-                Status = existingParticleType?.Status ?? "0",
-                Comments = existingParticleType?.Comments,
-                SubTypes = subTypes
-            });
-        }
-
-        return result;
+                SampleId = pst.SampleId,
+                TestId = pst.TestId,
+                ParticleTypeDefinitionId = pst.ParticleTypeDefinitionId,
+                ParticleSubTypeCategoryId = pst.ParticleSubTypeCategoryId,
+                CategoryName = pst.ParticleSubTypeCategoryDefinition?.Name ?? "Unknown",
+                Value = pst.Value?.ToString() ?? "0"
+            }).ToList()
+        }).ToList();
     }
 
     public async Task<List<ParticleTypeCategoryDto>> GetParticleTypeCategoriesAsync()
     {
-        return await _context.ParticleSubTypeCategoryDefinitions
-            .Where(c => c.Active == true)
-            .OrderBy(c => c.SortOrder)
-            .Select(c => new ParticleTypeCategoryDto
-            {
-                Id = c.Id,
-                Description = c.Description ?? string.Empty,
-                SortOrder = c.SortOrder ?? 0,
-                SubtypeCount = c.ParticleSubTypeDefinitions.Count(s => s.Active == true),
-                IsActive = c.Active == true
-            })
-            .ToListAsync();
+        // Get particle type definitions as categories
+        var particleTypeDefinitions = await _context.ParticleTypeDefinitions.ToListAsync();
+
+        return particleTypeDefinitions.Select(ptd => new ParticleTypeCategoryDto
+        {
+            Id = ptd.Id,
+            Name = ptd.Name ?? "Unknown",
+            Description = ptd.Description,
+            Severity = ptd.Severity ?? "Unknown",
+            Color = ptd.Color ?? "#000000",
+            Texture = ptd.Texture,
+            Composition = ptd.Composition,
+            SizeAve = ptd.SizeAve,
+            SizeMax = ptd.SizeMax,
+            Heat = ptd.Heat
+        }).ToList();
     }
 
     public async Task<List<ParticleSubTypeDefinitionDto>> GetParticleSubTypeDefinitionsAsync()
     {
-        return await _context.ParticleSubTypeDefinitions
-            .Include(psd => psd.ParticleSubTypeCategoryDefinition)
-            .Where(psd => psd.Active == true && psd.ParticleSubTypeCategoryDefinition.Active == true)
-            .OrderBy(psd => psd.ParticleSubTypeCategoryDefinition.SortOrder)
-            .ThenBy(psd => psd.SortOrder)
-            .Select(psd => new ParticleSubTypeDefinitionDto
-            {
-                Id = psd.Id,
-                ParticleSubTypeCategoryId = psd.ParticleSubTypeCategoryId,
-                CategoryDescription = psd.ParticleSubTypeCategoryDefinition.Description ?? string.Empty,
-                Value = psd.Value ?? string.Empty,
-                Description = psd.Description ?? string.Empty,
-                SortOrder = psd.SortOrder ?? 0,
-                IsActive = psd.Active == true
-            })
-            .ToListAsync();
+        var subTypeDefinitions = await _context.ParticleSubTypeCategoryDefinitions.ToListAsync();
+
+        return subTypeDefinitions.Select(std => new ParticleSubTypeDefinitionDto
+        {
+            Id = std.Id,
+            Name = std.Name ?? "Unknown",
+            Description = std.Description,
+            CategoryId = std.CategoryId,
+            CategoryName = std.CategoryName ?? "Unknown",
+            Unit = std.Unit,
+            MinValue = std.MinValue,
+            MaxValue = std.MaxValue,
+            DefaultValue = std.DefaultValue
+        }).ToList();
     }
 
     public async Task<bool> SaveParticleTypesAsync(int sampleId, short testId, List<ParticleTypeDto> particleTypes)
     {
         try
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // Remove existing particle types for this sample/test
+            var existingParticleTypes = await _context.ParticleTypes
+                .Where(pt => pt.SampleId == sampleId && pt.TestId == testId)
+                .ToListAsync();
 
-            foreach (var pt in particleTypes)
+            _context.ParticleTypes.RemoveRange(existingParticleTypes);
+
+            // Add new particle types
+            foreach (var particleTypeDto in particleTypes)
             {
-                // Save or update particle type
-                var existingParticleType = await _context.ParticleTypes
-                    .FirstOrDefaultAsync(pt => pt.SampleId == sampleId && 
-                                              pt.TestId == testId && 
-                                              pt.ParticleTypeDefinitionId == pt.ParticleTypeDefinitionId);
-
-                if (existingParticleType == null)
+                var particleType = new ParticleType
                 {
-                    var newParticleType = new ParticleType
+                    SampleId = sampleId,
+                    TestId = testId,
+                    ParticleTypeDefinitionId = particleTypeDto.ParticleTypeDefinitionId,
+                    Status = particleTypeDto.Status,
+                    Comments = particleTypeDto.Comments
+                };
+
+                _context.ParticleTypes.Add(particleType);
+
+                // Add sub-types
+                foreach (var subTypeDto in particleTypeDto.SubTypes)
+                {
+                    var subType = new ParticleSubType
                     {
                         SampleId = sampleId,
                         TestId = testId,
-                        ParticleTypeDefinitionId = pt.ParticleTypeDefinitionId,
-                        Status = pt.Status,
-                        Comments = pt.Comments,
-                        Heat = pt.Heat,
-                        Concentration = pt.Concentration,
-                        SizeAve = pt.SizeAve,
-                        SizeMax = pt.SizeMax,
-                        Color = pt.Color,
-                        Texture = pt.Texture,
-                        Composition = pt.Composition,
-                        Severity = pt.Severity
+                        ParticleTypeDefinitionId = particleTypeDto.ParticleTypeDefinitionId,
+                        ParticleSubTypeCategoryId = subTypeDto.ParticleSubTypeCategoryId,
+                        Value = int.TryParse(subTypeDto.Value, out var intValue) ? intValue : null
                     };
-                    _context.ParticleTypes.Add(newParticleType);
-                }
-                else
-                {
-                    existingParticleType.Status = pt.Status;
-                    existingParticleType.Comments = pt.Comments;
-                    existingParticleType.Heat = pt.Heat;
-                    existingParticleType.Concentration = pt.Concentration;
-                    existingParticleType.SizeAve = pt.SizeAve;
-                    existingParticleType.SizeMax = pt.SizeMax;
-                    existingParticleType.Color = pt.Color;
-                    existingParticleType.Texture = pt.Texture;
-                    existingParticleType.Composition = pt.Composition;
-                    existingParticleType.Severity = pt.Severity;
-                }
 
-                // Handle sub-types
-                if (pt.Status == "1") // Review status
-                {
-                    await SaveParticleSubTypesAsync(sampleId, testId, pt.ParticleTypeDefinitionId, pt.SubTypes);
-                }
-                else
-                {
-                    await DeleteParticleSubTypesAsync(sampleId, testId, pt.ParticleTypeDefinitionId);
+                    _context.ParticleSubTypes.Add(subType);
                 }
             }
 
             await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
             return true;
         }
         catch
@@ -153,74 +131,22 @@ public class ParticleAnalysisService : IParticleAnalysisService
         }
     }
 
-    private async Task<List<ParticleSubTypeDto>> GetParticleSubTypesAsync(int sampleId, short testId, int particleTypeDefinitionId)
-    {
-        var subTypes = await _context.ParticleSubTypes
-            .Include(pst => pst.ParticleSubTypeCategoryDefinition)
-            .Where(pst => pst.SampleId == sampleId && 
-                         pst.TestId == testId && 
-                         pst.ParticleTypeDefinitionId == particleTypeDefinitionId)
-            .ToListAsync();
-
-        return subTypes.Select(st => new ParticleSubTypeDto
-        {
-            ParticleSubTypeCategoryId = st.ParticleSubTypeCategoryId,
-            CategoryDescription = st.ParticleSubTypeCategoryDefinition.Description,
-            Value = st.Value
-        }).ToList();
-    }
-
-    private async Task SaveParticleSubTypesAsync(int sampleId, short testId, int particleTypeDefinitionId, List<ParticleSubTypeDto> subTypes)
-    {
-        foreach (var subType in subTypes)
-        {
-            var existing = await _context.ParticleSubTypes
-                .FirstOrDefaultAsync(pst => pst.SampleId == sampleId && 
-                                           pst.TestId == testId && 
-                                           pst.ParticleTypeDefinitionId == particleTypeDefinitionId && 
-                                           pst.ParticleSubTypeCategoryId == subType.ParticleSubTypeCategoryId);
-
-            if (existing == null)
-            {
-                var newSubType = new ParticleSubType
-                {
-                    SampleId = sampleId,
-                    TestId = testId,
-                    ParticleTypeDefinitionId = particleTypeDefinitionId,
-                    ParticleSubTypeCategoryId = subType.ParticleSubTypeCategoryId,
-                    Value = subType.Value
-                };
-                _context.ParticleSubTypes.Add(newSubType);
-            }
-            else
-            {
-                existing.Value = subType.Value;
-            }
-        }
-    }
-
-    private async Task DeleteParticleSubTypesAsync(int sampleId, short testId, int particleTypeDefinitionId)
-    {
-        var subTypes = await _context.ParticleSubTypes
-            .Where(pst => pst.SampleId == sampleId && 
-                         pst.TestId == testId && 
-                         pst.ParticleTypeDefinitionId == particleTypeDefinitionId)
-            .ToListAsync();
-
-        _context.ParticleSubTypes.RemoveRange(subTypes);
-    }
-
     public async Task<ParticleAnalysisDto> GetParticleAnalysisAsync(int sampleId, short testId)
     {
         var particleTypes = await GetParticleTypesAsync(sampleId, testId);
-        
+        var categories = await GetParticleTypeCategoriesAsync();
+        var subTypeDefinitions = await GetParticleSubTypeDefinitionsAsync();
+
         return new ParticleAnalysisDto
         {
             SampleId = sampleId,
             TestId = testId,
             ParticleTypes = particleTypes,
-            AnalysisDate = DateTime.Now,
-            OverallSeverity = DetermineOverallSeverity(particleTypes)
+            Categories = categories,
+            SubTypeDefinitions = subTypeDefinitions,
+            AnalysisDate = DateTime.UtcNow,
+            AnalystId = "SYSTEM", // Would come from authentication in real implementation
+            Status = particleTypes.Any() ? "COMPLETED" : "PENDING"
         };
     }
 
@@ -232,27 +158,9 @@ public class ParticleAnalysisService : IParticleAnalysisService
         {
             return await GetParticleAnalysisAsync(dto.SampleId, dto.TestId);
         }
-        
-        throw new InvalidOperationException("Failed to save particle analysis");
-    }
-
-    private static string DetermineOverallSeverity(List<ParticleTypeDto> particleTypes)
-    {
-        var activeParticleTypes = particleTypes.Where(pt => pt.Status == "1").ToList();
-        
-        if (!activeParticleTypes.Any())
-            return "0";
-        
-        // Simple logic to determine overall severity based on active particle types
-        // In a real implementation, this would be more sophisticated
-        var severityCount = activeParticleTypes.Count(pt => !string.IsNullOrEmpty(pt.Severity));
-        
-        return severityCount switch
+        else
         {
-            0 => "1",
-            <= 2 => "2",
-            <= 4 => "3",
-            _ => "4"
-        };
+            throw new InvalidOperationException("Failed to save particle analysis");
+        }
     }
 }

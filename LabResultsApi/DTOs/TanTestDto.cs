@@ -3,8 +3,8 @@ namespace LabResultsApi.DTOs;
 public class TanTestDto
 {
     public int SampleId { get; set; }
-    public int TestId { get; set; }
-    public int TrialNumber { get; set; }
+    public short TestId { get; set; }
+    public short TrialNumber { get; set; }
     public double SampleWeight { get; set; }
     public double FinalBuret { get; set; }
     public double TanCalculated { get; set; }

@@ -27,6 +27,7 @@ builder.Services.AddScoped<ITestResultService, TestResultService>();
 builder.Services.AddScoped<IUserQualificationService, UserQualificationService>();
 builder.Services.AddScoped<IEquipmentService, EquipmentService>();
 builder.Services.AddScoped<IParticleAnalysisService, ParticleAnalysisService>();
+builder.Services.AddScoped<IMockDataService, MockDataService>();
 
 // CORS
 builder.Services.AddCors(options =>
@@ -65,7 +66,7 @@ app.UseCors("AllowAngularApp");
 // Custom middleware
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
-app.UseAuthorization();
+// app.UseAuthorization(); // Disabled for now
 
 // Map organized endpoint groups
 app.MapTestResultsEndpoints();
@@ -75,5 +76,6 @@ app.MapUserQualificationEndpoints();
 app.MapEquipmentEndpoints();
 app.MapParticleAnalysisEndpoints();
 app.MapStatusManagementEndpoints();
+app.MapMockDataEndpoints();
 
 app.Run();
