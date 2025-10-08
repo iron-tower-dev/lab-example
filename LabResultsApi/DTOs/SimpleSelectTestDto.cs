@@ -13,4 +13,6 @@ public class SimpleSelectTestDto
     public string? Result { get; set; } // Pass, Fail - Light, Fail - Moderate, Fail - Severe
     public string? Comments { get; set; }
     public string Status { get; set; } = "S";
+    public string? SelectedValue { get; set; }
+    public string? EntryId { get; set; }
 }

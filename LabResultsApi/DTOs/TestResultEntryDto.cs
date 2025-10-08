@@ -22,6 +22,8 @@ public class TestResultEntryDto
     public string? Id3 { get; set; }
     public string? Status { get; set; }
     public string? MainComments { get; set; }
+    public string? EntryId { get; set; }
+    public DateTime? EntryDate { get; set; }
     public bool IsPartialSave { get; set; }
     public bool IsMediaReady { get; set; }
     public bool IsDelete { get; set; }

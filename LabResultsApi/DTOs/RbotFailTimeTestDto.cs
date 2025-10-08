@@ -14,4 +14,5 @@ public class RbotFailTimeTestDto
     public string? FileData { get; set; }
     public string? Comments { get; set; }
     public string Status { get; set; } = "S";
+    public string? EntryId { get; set; }
 }

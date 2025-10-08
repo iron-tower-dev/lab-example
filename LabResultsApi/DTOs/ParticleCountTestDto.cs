@@ -3,8 +3,8 @@ namespace LabResultsApi.DTOs;
 public class ParticleCountTestDto
 {
     public int SampleId { get; set; }
-    public int TestId { get; set; }
-    public int TrialNumber { get; set; }
+    public short TestId { get; set; }
+    public short TrialNumber { get; set; }
     public double? Micron5_10 { get; set; }
     public double? Micron10_15 { get; set; }
     public double? Micron15_25 { get; set; }

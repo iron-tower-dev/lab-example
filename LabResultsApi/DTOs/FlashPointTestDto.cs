@@ -3,8 +3,8 @@ namespace LabResultsApi.DTOs;
 public class FlashPointTestDto
 {
     public int SampleId { get; set; }
-    public int TestId { get; set; }
-    public int TrialNumber { get; set; }
+    public short TestId { get; set; }
+    public short TrialNumber { get; set; }
     public string? BarometerMteId { get; set; }
     public string? ThermometerMteId { get; set; }
     public double BarometricPressure { get; set; }

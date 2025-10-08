@@ -3,8 +3,8 @@ namespace LabResultsApi.DTOs;
 public class GreasePenetrationTestDto
 {
     public int SampleId { get; set; }
-    public int TestId { get; set; }
-    public int TrialNumber { get; set; }
+    public short TestId { get; set; }
+    public short TrialNumber { get; set; }
     public double FirstPenetration { get; set; }
     public double SecondPenetration { get; set; }
     public double ThirdPenetration { get; set; }

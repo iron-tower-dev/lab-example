@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, signal, computed, inject, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, FormArray, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -15,34 +15,35 @@ import { Subject, takeUntil, combineLatest } from 'rxjs';
 
 import { TestResultService } from '../../services/test-result.service';
 import {
-    TestResultEntry,
-    SampleInfo,
-    TestInfo,
-    UserQualification,
-    Equipment,
-    TestMode,
-    QualificationLevel
+  TestResultEntry,
+  SampleInfo,
+  TestInfo,
+  UserQualification,
+  Equipment,
+  TestMode,
+  QualificationLevel
 } from '../../models/test-result.models';
 
 @Component({
-    selector: 'app-test-result-entry',
-    standalone: true,
-    imports: [
-        CommonModule,
-        FormsModule,
-        ReactiveFormsModule,
-        MatCardModule,
-        MatButtonModule,
-        MatFormFieldModule,
-        MatInputModule,
-        MatSelectModule,
-        MatCheckboxModule,
-        MatRadioModule,
-        MatIconModule,
-        MatProgressSpinnerModule,
-        MatSnackBarModule
-    ],
-    template: `
+  selector: 'app-test-result-entry',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    MatCardModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatCheckboxModule,
+    MatRadioModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule
+  ],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA],
+  template: `
     <div class="test-result-entry">
       @if (loading()) {
         <mat-spinner></mat-spinner>
@@ -77,14 +78,18 @@ import {
             <form [formGroup]="entryForm" (ngSubmit)="onSubmit()">
               <!-- Dynamic form fields based on test type -->
               @if (testInfo()?.id) {
-                <ng-container [ngSwitch]="testInfo()!.id">
+                @switch (testInfo()!.id) {
                   <!-- TAN Test (10) -->
                   @case (10) {
                     <app-tan-entry [formGroup]="entryForm" [equipment]="equipment()"></app-tan-entry>
                   }
                   
                   <!-- Viscosity Tests (50, 60) -->
-                  @case (50; 60) {
+                  @case (50) {
+                    <app-viscosity-entry [formGroup]="entryForm" [equipment]="equipment()" 
+                                        [lubeType]="sampleInfo()?.lubeType || ''"></app-viscosity-entry>
+                  }
+                  @case (60) {
                     <app-viscosity-entry [formGroup]="entryForm" [equipment]="equipment()" 
                                         [lubeType]="sampleInfo()?.lubeType || ''"></app-viscosity-entry>
                   }
@@ -95,7 +100,22 @@ import {
                   }
                   
                   <!-- Particle Analysis Tests (120, 180, 210, 240) -->
-                  @case (120; 180; 210; 240) {
+                  @case (120) {
+                    <app-particle-analysis-entry [formGroup]="entryForm" 
+                                                [particleTypes]="particleTypes()"
+                                                [testId]="testInfo()!.id"></app-particle-analysis-entry>
+                  }
+                  @case (180) {
+                    <app-particle-analysis-entry [formGroup]="entryForm" 
+                                                [particleTypes]="particleTypes()"
+                                                [testId]="testInfo()!.id"></app-particle-analysis-entry>
+                  }
+                  @case (210) {
+                    <app-particle-analysis-entry [formGroup]="entryForm" 
+                                                [particleTypes]="particleTypes()"
+                                                [testId]="testInfo()!.id"></app-particle-analysis-entry>
+                  }
+                  @case (240) {
                     <app-particle-analysis-entry [formGroup]="entryForm" 
                                                 [particleTypes]="particleTypes()"
                                                 [testId]="testInfo()!.id"></app-particle-analysis-entry>
@@ -105,7 +125,7 @@ import {
                   @default {
                     <app-generic-entry [formGroup]="entryForm" [equipment]="equipment()"></app-generic-entry>
                   }
-                </ng-container>
+                }
               }
 
               <!-- Action Buttons -->
@@ -155,7 +175,7 @@ import {
       }
     </div>
   `,
-    styles: [`
+  styles: [`
     .test-result-entry {
       max-width: 1200px;
       margin: 0 auto;
@@ -191,238 +211,238 @@ import {
   `]
 })
 export class TestResultEntryComponent implements OnInit, OnDestroy {
-    @Input() sampleId!: number;
-    @Input() testId!: number;
-    @Input() mode: TestMode = 'entry';
+  @Input() sampleId!: number;
+  @Input() testId!: number;
+  @Input() mode: TestMode = 'entry';
 
-    private readonly fb = inject(FormBuilder);
-    private readonly testResultService = inject(TestResultService);
-    private readonly snackBar = inject(MatSnackBar);
-    private readonly destroy$ = new Subject<void>();
+  private readonly fb = inject(FormBuilder);
+  private readonly testResultService = inject(TestResultService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly destroy$ = new Subject<void>();
 
-    // Signals for reactive state
-    loading = signal(true);
-    saving = signal(false);
-    sampleInfo = signal<SampleInfo | null>(null);
-    testInfo = signal<TestInfo | null>(null);
-    userQualification = signal<UserQualification | null>(null);
-    equipment = signal<Equipment[]>([]);
-    particleTypes = signal<any[]>([]);
+  // Signals for reactive state
+  loading = signal(true);
+  saving = signal(false);
+  sampleInfo = signal<SampleInfo | null>(null);
+  testInfo = signal<TestInfo | null>(null);
+  userQualification = signal<UserQualification | null>(null);
+  equipment = signal<Equipment[]>([]);
+  particleTypes = signal<any[]>([]);
 
-    // Computed properties
-    canEnter = computed(() => {
-        const qual = this.userQualification();
-        return qual?.canEnter && this.mode === 'entry';
+  // Computed properties
+  canEnter = computed(() => {
+    const qual = this.userQualification();
+    return qual?.canEnter && this.mode === 'entry';
+  });
+
+  canReview = computed(() => {
+    const qual = this.userQualification();
+    return qual?.canReview && this.mode === 'review';
+  });
+
+  canPartialSave = computed(() => {
+    const qual = this.userQualification();
+    const test = this.testInfo();
+    return qual?.canEnter && test && [120, 180, 210, 240].includes(test.id);
+  });
+
+  canMediaReady = computed(() => {
+    const qual = this.userQualification();
+    const test = this.testInfo();
+    return qual?.canEnter && test && [120, 180, 210, 240].includes(test.id);
+  });
+
+  entryForm!: FormGroup;
+
+  ngOnInit(): void {
+    this.initializeForm();
+    this.loadData();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private initializeForm(): void {
+    this.entryForm = this.fb.group({
+      entries: this.fb.array([]),
+      isPartialSave: [false],
+      isMediaReady: [false],
+      isDelete: [false]
     });
+  }
 
-    canReview = computed(() => {
-        const qual = this.userQualification();
-        return qual?.canReview && this.mode === 'review';
+  private loadData(): void {
+    this.loading.set(true);
+
+    combineLatest([
+      this.testResultService.getSampleInfo(this.sampleId),
+      this.testResultService.getTestInfo(this.testId),
+      this.testResultService.getUserQualification('TEST001', this.testId),
+      this.testResultService.getTestResults(this.sampleId, this.testId)
+    ]).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: ([sampleInfo, testInfo, qualification, results]) => {
+        this.sampleInfo.set(sampleInfo);
+        this.testInfo.set(testInfo);
+        this.userQualification.set(qualification);
+
+        this.initializeFormEntries(results);
+        this.loadEquipment();
+
+        if ([120, 180, 210, 240].includes(testInfo.id)) {
+          this.loadParticleTypes();
+        }
+
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading data:', error);
+        this.snackBar.open('Error loading test data', 'Close', { duration: 3000 });
+        this.loading.set(false);
+      }
     });
+  }
 
-    canPartialSave = computed(() => {
-        const qual = this.userQualification();
-        const test = this.testInfo();
-        return qual?.canEnter && test && [120, 180, 210, 240].includes(test.id);
+  private initializeFormEntries(results: TestResultEntry[]): void {
+    const entriesArray = this.entryForm.get('entries') as FormArray;
+    entriesArray.clear();
+
+    if (results.length === 0) {
+      // Add default entry
+      entriesArray.push(this.createEntryFormGroup());
+    } else {
+      results.forEach(result => {
+        entriesArray.push(this.createEntryFormGroup(result));
+      });
+    }
+  }
+
+  private createEntryFormGroup(data?: TestResultEntry): FormGroup {
+    return this.fb.group({
+      sampleId: [this.sampleId],
+      testId: [this.testId],
+      trialNumber: [data?.trialNumber || 1],
+      value1: [data?.value1],
+      value2: [data?.value2],
+      value3: [data?.value3],
+      trialCalc: [data?.trialCalc],
+      id1: [data?.id1],
+      id2: [data?.id2],
+      id3: [data?.id3],
+      status: [data?.status],
+      mainComments: [data?.mainComments],
+      isSelected: [true]
     });
+  }
 
-    canMediaReady = computed(() => {
-        const qual = this.userQualification();
-        const test = this.testInfo();
-        return qual?.canEnter && test && [120, 180, 210, 240].includes(test.id);
+  private loadEquipment(): void {
+    const test = this.testInfo();
+    if (!test) return;
+
+    // Load equipment based on test type
+    const equipmentTypes = this.getEquipmentTypesForTest(test.id);
+
+    equipmentTypes.forEach(type => {
+      this.testResultService.getEquipment(type, test.id).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe(equipment => {
+        this.equipment.update(current => [...current, ...equipment]);
+      });
     });
+  }
 
-    entryForm!: FormGroup;
+  private loadParticleTypes(): void {
+    this.testResultService.getParticleTypes(this.sampleId, this.testId).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(particleTypes => {
+      this.particleTypes.set(particleTypes);
+    });
+  }
 
-    ngOnInit(): void {
-        this.initializeForm();
-        this.loadData();
+  private getEquipmentTypesForTest(testId: number): string[] {
+    switch (testId) {
+      case 10: return ['THERMOMETER'];
+      case 50:
+      case 60: return ['THERMOMETER', 'TIMER', 'VISCOMETER'];
+      case 80: return ['BAROMETER', 'THERMOMETER'];
+      case 130: return [];
+      case 140: return ['THERMOMETER'];
+      case 170:
+      case 230: return ['THERMOMETER'];
+      case 220: return ['THERMOMETER'];
+      case 250: return ['DELETERIOUS'];
+      default: return [];
     }
+  }
 
-    ngOnDestroy(): void {
-        this.destroy$.next();
-        this.destroy$.complete();
+  onSubmit(): void {
+    if (this.entryForm.valid) {
+      this.saveResults('entry');
     }
+  }
 
-    private initializeForm(): void {
-        this.entryForm = this.fb.group({
-            entries: this.fb.array([]),
-            isPartialSave: [false],
-            isMediaReady: [false],
-            isDelete: [false]
-        });
-    }
+  onPartialSave(): void {
+    this.entryForm.patchValue({ isPartialSave: true });
+    this.saveResults('entry');
+  }
 
-    private loadData(): void {
-        this.loading.set(true);
+  onMediaReady(): void {
+    this.entryForm.patchValue({ isMediaReady: true });
+    this.saveResults('entry');
+  }
 
-        combineLatest([
-            this.testResultService.getSampleInfo(this.sampleId),
-            this.testResultService.getTestInfo(this.testId),
-            this.testResultService.getUserQualification('TEST001', this.testId),
-            this.testResultService.getTestResults(this.sampleId, this.testId)
-        ]).pipe(
-            takeUntil(this.destroy$)
-        ).subscribe({
-            next: ([sampleInfo, testInfo, qualification, results]) => {
-                this.sampleInfo.set(sampleInfo);
-                this.testInfo.set(testInfo);
-                this.userQualification.set(qualification);
+  onAccept(): void {
+    this.saveResults('reviewaccept');
+  }
 
-                this.initializeFormEntries(results);
-                this.loadEquipment();
+  onReject(): void {
+    this.saveResults('reviewreject');
+  }
 
-                if ([120, 180, 210, 240].includes(testInfo.id)) {
-                    this.loadParticleTypes();
-                }
+  onClear(): void {
+    this.entryForm.reset();
+    this.initializeFormEntries([]);
+  }
 
-                this.loading.set(false);
-            },
-            error: (error) => {
-                console.error('Error loading data:', error);
-                this.snackBar.open('Error loading test data', 'Close', { duration: 3000 });
-                this.loading.set(false);
-            }
-        });
-    }
+  onCancel(): void {
+    // Navigate back or close
+    window.history.back();
+  }
 
-    private initializeFormEntries(results: TestResultEntry[]): void {
-        const entriesArray = this.entryForm.get('entries') as FormArray;
-        entriesArray.clear();
+  private saveResults(mode: 'entry' | 'reviewaccept' | 'reviewreject'): void {
+    this.saving.set(true);
 
-        if (results.length === 0) {
-            // Add default entry
-            entriesArray.push(this.createEntryFormGroup());
+    const formValue = this.entryForm.value;
+    const saveData = {
+      sampleId: this.sampleId,
+      testId: this.testId,
+      mode: mode,
+      entries: formValue.entries.filter((entry: any) => entry.isSelected),
+      isPartialSave: formValue.isPartialSave,
+      isMediaReady: formValue.isMediaReady,
+      isDelete: formValue.isDelete
+    };
+
+    this.testResultService.saveTestResults(saveData).pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (response) => {
+        this.saving.set(false);
+        if (response.success) {
+          this.snackBar.open('Results saved successfully', 'Close', { duration: 3000 });
+          this.loadData(); // Reload to get updated data
         } else {
-            results.forEach(result => {
-                entriesArray.push(this.createEntryFormGroup(result));
-            });
+          this.snackBar.open(response.errorMessage || 'Error saving results', 'Close', { duration: 5000 });
         }
-    }
-
-    private createEntryFormGroup(data?: TestResultEntry): FormGroup {
-        return this.fb.group({
-            sampleId: [this.sampleId],
-            testId: [this.testId],
-            trialNumber: [data?.trialNumber || 1],
-            value1: [data?.value1],
-            value2: [data?.value2],
-            value3: [data?.value3],
-            trialCalc: [data?.trialCalc],
-            id1: [data?.id1],
-            id2: [data?.id2],
-            id3: [data?.id3],
-            status: [data?.status],
-            mainComments: [data?.mainComments],
-            isSelected: [true]
-        });
-    }
-
-    private loadEquipment(): void {
-        const test = this.testInfo();
-        if (!test) return;
-
-        // Load equipment based on test type
-        const equipmentTypes = this.getEquipmentTypesForTest(test.id);
-
-        equipmentTypes.forEach(type => {
-            this.testResultService.getEquipment(type, test.id).pipe(
-                takeUntil(this.destroy$)
-            ).subscribe(equipment => {
-                this.equipment.update(current => [...current, ...equipment]);
-            });
-        });
-    }
-
-    private loadParticleTypes(): void {
-        this.testResultService.getParticleTypes(this.sampleId, this.testId).pipe(
-            takeUntil(this.destroy$)
-        ).subscribe(particleTypes => {
-            this.particleTypes.set(particleTypes);
-        });
-    }
-
-    private getEquipmentTypesForTest(testId: number): string[] {
-        switch (testId) {
-            case 10: return ['THERMOMETER'];
-            case 50:
-            case 60: return ['THERMOMETER', 'TIMER', 'VISCOMETER'];
-            case 80: return ['BAROMETER', 'THERMOMETER'];
-            case 130: return [];
-            case 140: return ['THERMOMETER'];
-            case 170:
-            case 230: return ['THERMOMETER'];
-            case 220: return ['THERMOMETER'];
-            case 250: return ['DELETERIOUS'];
-            default: return [];
-        }
-    }
-
-    onSubmit(): void {
-        if (this.entryForm.valid) {
-            this.saveResults('entry');
-        }
-    }
-
-    onPartialSave(): void {
-        this.entryForm.patchValue({ isPartialSave: true });
-        this.saveResults('entry');
-    }
-
-    onMediaReady(): void {
-        this.entryForm.patchValue({ isMediaReady: true });
-        this.saveResults('entry');
-    }
-
-    onAccept(): void {
-        this.saveResults('reviewaccept');
-    }
-
-    onReject(): void {
-        this.saveResults('reviewreject');
-    }
-
-    onClear(): void {
-        this.entryForm.reset();
-        this.initializeFormEntries([]);
-    }
-
-    onCancel(): void {
-        // Navigate back or close
-        window.history.back();
-    }
-
-    private saveResults(mode: string): void {
-        this.saving.set(true);
-
-        const formValue = this.entryForm.value;
-        const saveData = {
-            sampleId: this.sampleId,
-            testId: this.testId,
-            mode: mode,
-            entries: formValue.entries.filter((entry: any) => entry.isSelected),
-            isPartialSave: formValue.isPartialSave,
-            isMediaReady: formValue.isMediaReady,
-            isDelete: formValue.isDelete
-        };
-
-        this.testResultService.saveTestResults(saveData).pipe(
-            takeUntil(this.destroy$)
-        ).subscribe({
-            next: (response) => {
-                this.saving.set(false);
-                if (response.success) {
-                    this.snackBar.open('Results saved successfully', 'Close', { duration: 3000 });
-                    this.loadData(); // Reload to get updated data
-                } else {
-                    this.snackBar.open(response.errorMessage || 'Error saving results', 'Close', { duration: 5000 });
-                }
-            },
-            error: (error) => {
-                this.saving.set(false);
-                console.error('Error saving results:', error);
-                this.snackBar.open('Error saving results', 'Close', { duration: 3000 });
-            }
-        });
-    }
+      },
+      error: (error) => {
+        this.saving.set(false);
+        console.error('Error saving results:', error);
+        this.snackBar.open('Error saving results', 'Close', { duration: 3000 });
+      }
+    });
+  }
 }

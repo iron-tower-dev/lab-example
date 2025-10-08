@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using LabResultsApi.Data;
 using LabResultsApi.DTOs;
+using LabResultsApi.Models;
 
 namespace LabResultsApi.Services;
 
@@ -15,26 +16,50 @@ public class UserQualificationService : IUserQualificationService
 
     public async Task<UserQualificationDto> GetUserQualificationAsync(string employeeId, short testId)
     {
+        // Get user qualification from LubeTechQualification table
         var qualification = await _context.LubeTechQualifications
-            .Include(lq => lq.TestStandId)
-            .Where(lq => lq.EmployeeId == employeeId)
-            .Join(_context.Tests,
-                lq => lq.TestStandId,
-                t => t.TestStandId,
-                (lq, t) => new { lq, t })
-            .Where(x => x.t.Id == testId)
-            .Select(x => x.lq.QualificationLevel)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(lq => lq.EmployeeId == employeeId);
 
-        var qualificationLevel = qualification ?? string.Empty;
+        if (qualification == null)
+        {
+            return new UserQualificationDto
+            {
+                EmployeeId = employeeId,
+                TestId = testId,
+                TestStandId = 0,
+                TestStand = "Unknown",
+                QualificationLevel = "None",
+                QualificationDate = DateTime.MinValue,
+                ExpiryDate = null,
+                IsExpired = true,
+                CanEnter = false,
+                CanReview = false,
+                CanReviewOwn = false
+            };
+        }
+
+        // Get test stand information
+        var testStand = await _context.TestStands
+            .FirstOrDefaultAsync(ts => ts.Id == qualification.TestStandId);
+
+        // Determine capabilities based on qualification level
+        var canEnter = qualification.QualificationLevel == "Q" || qualification.QualificationLevel == "QAG";
+        var canReview = qualification.QualificationLevel == "QAG" || qualification.QualificationLevel == "MicrE";
+        var canReviewOwn = qualification.QualificationLevel == "Q" || qualification.QualificationLevel == "QAG" || qualification.QualificationLevel == "MicrE";
 
         return new UserQualificationDto
         {
             EmployeeId = employeeId,
-            QualificationLevel = qualificationLevel,
-            CanEnter = CanEnterResults(qualificationLevel),
-            CanReview = CanReviewResults(qualificationLevel),
-            CanReviewOwn = false // This would need additional logic to check if user can review their own results
+            TestId = testId,
+            TestStandId = qualification.TestStandId ?? 0,
+            TestStand = testStand?.Name ?? "Unknown",
+            QualificationLevel = qualification.QualificationLevel ?? "None",
+            QualificationDate = DateTime.MinValue, // Not available in database
+            ExpiryDate = null, // Not available in database
+            IsExpired = false, // Assume not expired if qualification exists
+            CanEnter = canEnter,
+            CanReview = canReview,
+            CanReviewOwn = canReviewOwn
         };
     }
 
@@ -47,116 +72,104 @@ public class UserQualificationService : IUserQualificationService
     public async Task<bool> CanUserReviewResultsAsync(string employeeId, short testId, int sampleId)
     {
         var qualification = await GetUserQualificationAsync(employeeId, testId);
-        
-        if (!qualification.CanReview) return false;
-
-        // Check if user is trying to review their own results
-        var entryId = await _context.TestReadings
-            .Where(tr => tr.SampleId == sampleId && tr.TestId == testId)
-            .Select(tr => tr.EntryId)
-            .FirstOrDefaultAsync();
-
-        if (entryId == employeeId && !qualification.CanReviewOwn)
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    private static bool CanEnterResults(string qualificationLevel)
-    {
-        return qualificationLevel switch
-        {
-            "Q/QAG" or "MicrE" or "TRAIN" => true,
-            _ => false
-        };
-    }
-
-    private static bool CanReviewResults(string qualificationLevel)
-    {
-        return qualificationLevel switch
-        {
-            "Q/QAG" or "MicrE" => true,
-            _ => false
-        };
+        return qualification.CanReview;
     }
 
     public async Task<object> GetUserQualificationSummaryAsync(string userId)
     {
         var qualifications = await _context.LubeTechQualifications
             .Where(lq => lq.EmployeeId == userId)
-            .CountAsync();
+            .ToListAsync();
 
-        var qualifiedTests = await _context.LubeTechQualifications
-            .Where(lq => lq.EmployeeId == userId && 
-                        (lq.QualificationLevel == "Q" || lq.QualificationLevel == "QAG" || lq.QualificationLevel == "MicrE"))
-            .CountAsync();
+        var testStands = await _context.TestStands.ToListAsync();
+
+        var summary = qualifications.Select(q => new
+        {
+            TestStandId = q.TestStandId,
+            TestStand = testStands.FirstOrDefault(ts => ts.Id == q.TestStandId)?.Name ?? "Unknown",
+            QualificationLevel = q.QualificationLevel,
+            CanEnter = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG",
+            CanReview = q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE"
+        }).ToList();
 
         return new
         {
             UserId = userId,
-            TotalTests = qualifications,
-            QualifiedTests = qualifiedTests,
-            UnqualifiedTests = qualifications - qualifiedTests
+            Qualifications = summary,
+            TotalQualifications = summary.Count,
+            CanEnterAny = summary.Any(s => s.CanEnter),
+            CanReviewAny = summary.Any(s => s.CanReview)
         };
     }
 
     public async Task<List<TestInfoDto>> GetQualifiedTestsForUserAsync(string userId)
     {
-        var qualifiedTests = await _context.LubeTechQualifications
-            .Where(lq => lq.EmployeeId == userId && 
-                        (lq.QualificationLevel == "Q" || lq.QualificationLevel == "QAG" || lq.QualificationLevel == "MicrE"))
-            .Join(_context.Tests,
-                lq => lq.TestStandId,
-                t => t.TestStandId,
-                (lq, t) => new TestInfoDto
-                {
-                    Id = t.Id,
-                    Name = t.Name,
-                    Description = t.Description,
-                    IsActive = t.Active ?? false
-                })
+        var qualifications = await _context.LubeTechQualifications
+            .Where(lq => lq.EmployeeId == userId)
             .ToListAsync();
 
-        return qualifiedTests;
+        var testStandIds = qualifications.Select(q => q.TestStandId).Where(id => id.HasValue).Select(id => id.Value).ToList();
+
+        var tests = await _context.Tests
+            .Where(t => testStandIds.Contains(t.TestStandId ?? 0))
+            .Select(t => new TestInfoDto
+            {
+                Id = t.Id ?? 0,
+                Name = t.Name,
+                Description = null, // Not available in database
+                Abbrev = t.Abbrev,
+                ShortAbbrev = t.ShortAbbrev,
+                TestStandId = t.TestStandId,
+                SampleVolumeRequired = t.SampleVolumeRequired,
+                Exclude = t.Exclude,
+                DisplayGroupId = t.DisplayGroupId,
+                GroupName = t.GroupName,
+                Lab = t.Lab,
+                Schedule = t.Schedule,
+                IsActive = true // Assume active if in database
+            })
+            .ToListAsync();
+
+        return tests;
     }
 
     public async Task<List<TestInfoDto>> GetUnqualifiedTestsForUserAsync(string userId)
     {
-        var allTests = await _context.Tests.ToListAsync();
-        var qualifiedTestIds = await _context.LubeTechQualifications
-            .Where(lq => lq.EmployeeId == userId && 
-                        (lq.QualificationLevel == "Q" || lq.QualificationLevel == "QAG" || lq.QualificationLevel == "MicrE"))
-            .Join(_context.Tests,
-                lq => lq.TestStandId,
-                t => t.TestStandId,
-                (lq, t) => t.Id)
-            .ToListAsync();
+        var qualifiedTests = await GetQualifiedTestsForUserAsync(userId);
+        var qualifiedTestIds = qualifiedTests.Select(t => t.Id).ToList();
 
-        var unqualifiedTests = allTests
-            .Where(t => !qualifiedTestIds.Contains(t.Id))
+        var allTests = await _context.Tests
+            .Where(t => !qualifiedTestIds.Contains(t.Id ?? 0))
             .Select(t => new TestInfoDto
             {
-                Id = t.Id,
+                Id = t.Id ?? 0,
                 Name = t.Name,
-                Description = t.Description,
-                IsActive = t.Active ?? false
+                Description = null, // Not available in database
+                Abbrev = t.Abbrev,
+                ShortAbbrev = t.ShortAbbrev,
+                TestStandId = t.TestStandId,
+                SampleVolumeRequired = t.SampleVolumeRequired,
+                Exclude = t.Exclude,
+                DisplayGroupId = t.DisplayGroupId,
+                GroupName = t.GroupName,
+                Lab = t.Lab,
+                Schedule = t.Schedule,
+                IsActive = true // Assume active if in database
             })
-            .ToList();
+            .ToListAsync();
 
-        return unqualifiedTests;
+        return allTests;
     }
 
     public async Task<bool> CanUserPerformActionAsync(string userId, short testId, string action)
     {
         var qualification = await GetUserQualificationAsync(userId, testId);
-        
+
         return action.ToLower() switch
         {
-            "entry" => qualification.CanEnter,
+            "enter" => qualification.CanEnter,
             "review" => qualification.CanReview,
-            "approve" => qualification.QualificationLevel == "QAG" || qualification.QualificationLevel == "MicrE",
+            "reviewown" => qualification.CanReviewOwn,
             _ => false
         };
     }
@@ -165,32 +178,47 @@ public class UserQualificationService : IUserQualificationService
     {
         var qualifications = await _context.LubeTechQualifications
             .Where(lq => lq.TestStandId == testStandId)
-            .Select(lq => new UserQualificationDto
-            {
-                EmployeeId = lq.EmployeeId,
-                TestId = testStandId,
-                QualificationLevel = lq.QualificationLevel,
-                QualificationDate = lq.QualificationDate,
-                ExpiryDate = lq.ExpiryDate,
-                IsExpired = lq.ExpiryDate.HasValue && lq.ExpiryDate < DateTime.Now
-            })
             .ToListAsync();
 
-        return qualifications;
+        var testStand = await _context.TestStands
+            .FirstOrDefaultAsync(ts => ts.Id == testStandId);
+
+        return qualifications.Select(q => new UserQualificationDto
+        {
+            EmployeeId = q.EmployeeId ?? "",
+            TestId = 0, // Not specific to a test
+            TestStandId = testStandId,
+            TestStand = testStand?.Name ?? "Unknown",
+            QualificationLevel = q.QualificationLevel ?? "None",
+            QualificationDate = DateTime.MinValue, // Not available in database
+            ExpiryDate = null, // Not available in database
+            IsExpired = false, // Assume not expired if qualification exists
+            CanEnter = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG",
+            CanReview = q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE",
+            CanReviewOwn = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE"
+        }).ToList();
     }
 
     public async Task<List<object>> GetUserTestStandMappingsAsync(string userId)
     {
-        var mappings = await _context.LubeTechQualifications
+        var qualifications = await _context.LubeTechQualifications
             .Where(lq => lq.EmployeeId == userId)
-            .Select(lq => new
-            {
-                TestStandId = lq.TestStandId,
-                QualificationLevel = lq.QualificationLevel,
-                QualificationDate = lq.QualificationDate
-            })
             .ToListAsync();
 
-        return mappings.Cast<object>().ToList();
+        var testStands = await _context.TestStands.ToListAsync();
+
+        return qualifications.Select(q => new
+        {
+            EmployeeId = q.EmployeeId,
+            TestStandId = q.TestStandId,
+            TestStand = testStands.FirstOrDefault(ts => ts.Id == q.TestStandId)?.Name ?? "Unknown",
+            QualificationLevel = q.QualificationLevel,
+            Capabilities = new
+            {
+                CanEnter = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG",
+                CanReview = q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE",
+                CanReviewOwn = q.QualificationLevel == "Q" || q.QualificationLevel == "QAG" || q.QualificationLevel == "MicrE"
+            }
+        }).Cast<object>().ToList();
     }
 }

@@ -3,8 +3,8 @@ namespace LabResultsApi.DTOs;
 public class FtirTestDto
 {
     public int SampleId { get; set; }
-    public int TestId { get; set; }
-    public int TrialNumber { get; set; }
+    public short TestId { get; set; }
+    public short TrialNumber { get; set; }
     public double? DeltaArea { get; set; }
     public double? AntiOxidant { get; set; }
     public double? Oxidation { get; set; }

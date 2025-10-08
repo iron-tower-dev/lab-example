@@ -3,8 +3,8 @@ namespace LabResultsApi.DTOs;
 public class OxidationStabilityTestDto
 {
     public int SampleId { get; set; }
-    public int TestId { get; set; }
-    public int TrialNumber { get; set; }
+    public short TestId { get; set; }
+    public short TrialNumber { get; set; }
     public string? ThermometerMteId { get; set; }
     public int PassFailResult { get; set; } // 1=Pass, 2=Light Fail, 3=Moderate Fail, 4=Severe Fail
     public string Status { get; set; } = "S";

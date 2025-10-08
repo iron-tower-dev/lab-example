@@ -1,6 +1,7 @@
 using LabResultsApi.DTOs;
 using LabResultsApi.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace LabResultsApi.Endpoints;
@@ -14,8 +15,8 @@ public static class StatusManagementEndpoints
 ;
 
         // Get test status
-        group.MapGet("/test/{sampleId:int}/{testId:short}", 
-            async (int sampleId, short testId, ITestResultService service) =>
+        group.MapGet("/test/{sampleId:int}/{testId:int}", 
+            async (int sampleId, short testId, [FromServices] ITestResultService service) =>
             {
                 var status = await service.GetTestStatusAsync(sampleId, testId);
                 return Results.Ok(status);
@@ -41,7 +42,7 @@ public static class StatusManagementEndpoints
             .Produces(500);
 
         // Get test workflow
-        group.MapGet("/workflow/{testId:short}", 
+        group.MapGet("/workflow/{testId:int}", 
             async (short testId, ITestResultService service) =>
             {
                 var workflow = await service.GetTestWorkflowAsync(testId);
@@ -54,8 +55,8 @@ public static class StatusManagementEndpoints
             .Produces(500);
 
         // Get save status
-        group.MapGet("/save/{sampleId:int}/{testId:short}", 
-            async (int sampleId, short testId, ITestResultService service) =>
+        group.MapGet("/save/{sampleId:int}/{testId:int}", 
+            async (int sampleId, short testId, [FromServices] ITestResultService service) =>
             {
                 var status = await service.GetSaveStatusAsync(sampleId, testId);
                 return Results.Ok(status);
