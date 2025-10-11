@@ -15,8 +15,8 @@ public static class TestResultsEndpoints
 ;
 
         // Get test results for a specific sample and test
-        group.MapGet("/{sampleId:int}/{testId:short}", 
-            async (int sampleId, short testId, ITestResultService service) =>
+        group.MapGet("/{sampleId:int}/{testId:int}", 
+            async (int sampleId, short testId, [FromServices] ITestResultService service) =>
             {
                 var results = await service.GetTestResultsAsync(sampleId, testId);
                 return Results.Ok(results);
@@ -46,8 +46,8 @@ public static class TestResultsEndpoints
             .Produces(500);
 
         // Update test result
-        group.MapPut("/{sampleId:int}/{testId:short}", 
-            async (int sampleId, short testId, TestResultEntryDto dto, ITestResultService service) =>
+        group.MapPut("/{sampleId:int}/{testId:int}", 
+            async (int sampleId, short testId, TestResultEntryDto dto, [FromServices] ITestResultService service) =>
             {
                 var result = await service.UpdateTestResultAsync(sampleId, testId, dto);
                 return Results.Ok(result);
@@ -61,8 +61,8 @@ public static class TestResultsEndpoints
             .Produces(500);
 
         // Delete test result
-        group.MapDelete("/{sampleId:int}/{testId:short}", 
-            async (int sampleId, short testId, ITestResultService service) =>
+        group.MapDelete("/{sampleId:int}/{testId:int}", 
+            async (int sampleId, short testId, [FromServices] ITestResultService service) =>
             {
                 await service.DeleteTestResultAsync(sampleId, testId);
                 return Results.NoContent();

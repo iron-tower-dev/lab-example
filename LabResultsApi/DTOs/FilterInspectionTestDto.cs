@@ -15,4 +15,7 @@ public class FilterInspectionTestDto
     public string? Narrative { get; set; }
     public string? Comments { get; set; }
     public string Status { get; set; } = "S";
+    public string? FilterCondition { get; set; }
+    public string? InspectionResult { get; set; }
+    public string? EntryId { get; set; }
 }

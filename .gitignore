@@ -94,13 +94,23 @@ ScaffoldingReadMe.txt
 *.sqlite
 *.sqlite3
 
-# Node.js / Angular
+# Angular / Node.js
 node_modules/
+lab-results-app/node_modules/
+lab-results-app/dist/
+lab-results-app/.angular/
+lab-results-app/.sass-cache/
+lab-results-app/coverage/
+lab-results-app/tmp/
+lab-results-app/.env
+lab-results-app/.env.local
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+package-lock.json
+yarn.lock
 
 # Angular specific
 dist/
@@ -112,6 +122,8 @@ coverage/
 libpeerconnection.log
 testem.log
 typings/
+*.lcov
+.nyc_output/
 
 # Environment files
 .env
@@ -153,6 +165,7 @@ Desktop.ini
 *.zip
 
 # Logs and databases
+logs/
 *.log
 *.sql
 *.sqlite
@@ -229,13 +242,6 @@ publish/
 # Microsoft Azure Web App publish settings
 PublishScripts/
 
-# NuGet Packages
-*.nupkg
-**/[Pp]ackages/*
-!**/[Pp]ackages/build/
-*.nuget.props
-*.nuget.targets
-
 # Microsoft Azure Build Output
 csx/
 *.build.csdef
@@ -286,12 +292,6 @@ _ReSharper*/
 # JustCode is a .NET coding add-in
 .JustCode
 
-# TeamCity is a build add-in
-_TeamCity*
-
-# DotCover is a Code Coverage Tool
-*.dotCover
-
 # AxoCover is a Code Coverage Tool
 .axoCover/*
 !.axoCover/settings.json
@@ -301,45 +301,8 @@ coverage*.json
 coverage*.xml
 coverage*.info
 
-# Visual Studio code coverage results
-*.coverage
-*.coveragexml
-
-# NCrunch
-_NCrunch_*
-.*crunch*.local.xml
-nCrunchTemp_*
-
-# MightyMoose
-*.mm.*
-AutoTest.Net/
-
-# Web workbench (sass)
-.sass-cache/
-
-# Installshield output folder
-[Ee]xpress/
-
-# DocProject is a documentation generator add-in
-DocProject/buildhelp/
-DocProject/Help/*.HxT
-DocProject/Help/*.HxC
-DocProject/Help/*.hhc
-DocProject/Help/*.hhk
-DocProject/Help/*.hhp
-DocProject/Help/Html2
-DocProject/Help/html
-
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
-
-# .NET Core
-project.lock.json
-project.fragment.lock.json
-artifacts/
-
-# ASP.NET Scaffolding
-ScaffoldingReadMe.txt
 
 # StyleCop
 StyleCopReport.xml
@@ -348,85 +311,9 @@ StyleCopReport.xml
 *_i.c
 *_p.c
 *_h.h
-*.ilk
-*.meta
-*.obj
-*.iobj
-*.pch
-*.pdb
-*.ipdb
-*.pgc
-*.pgd
-*.rsp
-*.sbr
-*.tlb
-*.tli
-*.tlh
-*.tmp
-*.tmp_proj
-*_wpftmp.csproj
-*.log
-*.vspscc
-*.vssscc
-.builds
-*.pidb
-*.svclog
-*.scc
 
 # Chutzpah Test files
 _Chutzpah*
 
 # Visual C++ cache files
 ipch/
-*.aps
-*.ncb
-*.opendb
-*.opensdf
-*.sdf
-*.cachefile
-*.VC.db
-*.VC.VC.opendb
-
-# Visual Studio profiler
-*.psess
-*.vsp
-*.vspx
-*.sap
-
-# Visual Studio Trace Files
-*.e2e
-
-# TFS 2012 Local Workspace
-$tf/
-
-# Guidance Automation Toolkit
-*.gpState
-
-# ReSharper is a .NET coding add-in
-_ReSharper*/
-*.[Rr]e[Ss]harper
-*.DotSettings.user
-
-# TeamCity is a build add-in
-_TeamCity*
-
-# DotCover is a Code Coverage Tool
-*.dotCover
-
-# AxoCover is a Code Coverage Tool
-.axoCover/*
-!.axoCover/settings.json
-
-# Coverlet is a free, cross platform Code Coverage Tool
-coverage*.json
-coverage*.xml
-coverage*.info
-
-# Visual Studio code coverage results
-*.coverage
-*.coveragexml
-
-# NCrunch
-_NCrunch_*
-.*crunch*.local.xml
-nCrunchTemp_*

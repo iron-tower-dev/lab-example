@@ -51,7 +51,7 @@ public class TestResultService : ITestResultService
 
         return new TestInfoDto
         {
-            Id = test.Id,
+            Id = test.Id ?? 0,
             Name = test.Name,
             Abbrev = test.Abbrev,
             ShortAbbrev = test.ShortAbbrev,
@@ -442,7 +442,7 @@ public class TestResultService : ITestResultService
     public async Task<TestResultEntryDto> SaveFtirTestAsync(FtirTestDto dto)
     {
         // Save to FTIR table
-        var ftir = new Ftir
+        var ftir = new FTIR
         {
             SampleId = dto.SampleId,
             Contam = dto.DeltaArea,
@@ -453,10 +453,10 @@ public class TestResultService : ITestResultService
             Soot = dto.Soot,
             FuelDilution = dto.FuelDilution,
             Mixture = dto.Mixture,
-            Nlgi = dto.WeakAcid
+            NLGI = dto.WeakAcid
         };
 
-        _context.Ftirs.Add(ftir);
+        _context.FTIRs.Add(ftir);
 
         // Save to TestReadings table
         var testResult = new TestResultEntryDto
@@ -662,7 +662,7 @@ public class TestResultService : ITestResultService
             SampleId = dto.SampleId,
             TestId = dto.TestId,
             TrialNumber = dto.TrialNumber,
-            Value1 = dto.Value1,
+            Value1 = (double?)dto.Value1,
             Status = "S",
             EntryDate = DateTime.Now,
             MainComments = dto.FileContent
@@ -742,7 +742,7 @@ public class TestResultService : ITestResultService
         {
             TestId = testId,
             TestName = test.Name,
-            Description = test.Description,
+            Description = test.Name, // Use Name as description since Description property was removed
             Requirements = new[] { "Valid equipment", "User qualification", "Sample preparation" },
             Equipment = new[] { "Thermometer", "Timer", "Test apparatus" }
         };
@@ -764,5 +764,257 @@ public class TestResultService : ITestResultService
             .ToListAsync();
 
         return pendingTests;
+    }
+
+    // Additional test-specific save methods
+    public async Task<TestResultEntryDto> SaveSimpleResultTestAsync(SimpleResultTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = dto.Result
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
+    }
+
+    public async Task<TestResultEntryDto> SaveFilterInspectionTestAsync(FilterInspectionTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = double.TryParse(dto.FilterCondition, out var filterValue) ? filterValue : null,
+            MainComments = dto.Comments
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
+    }
+
+    public async Task<TestResultEntryDto> SaveFilterResidueTestAsync(FilterResidueTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = dto.ResidueWeight,
+            MainComments = dto.Comments
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
+    }
+
+    public async Task<TestResultEntryDto> SaveSimpleSelectTestAsync(SimpleSelectTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = double.TryParse(dto.SelectedValue, out var selectedValue) ? selectedValue : null,
+            MainComments = dto.Comments
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
+    }
+
+    public async Task<TestResultEntryDto> SaveRbotFailTimeTestAsync(RbotFailTimeTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = dto.FailTime,
+            MainComments = dto.Comments
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
+    }
+
+    public async Task<TestResultEntryDto> SaveInspectFilterTestAsync(InspectFilterTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = double.TryParse(dto.InspectionResult, out var inspectionValue) ? inspectionValue : null,
+            MainComments = dto.Comments
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
+    }
+
+    public async Task<TestResultEntryDto> SaveDInchTestAsync(DInchTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = dto.DInchValue,
+            MainComments = dto.Comments
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
+    }
+
+    public async Task<TestResultEntryDto> SaveOilContentTestAsync(OilContentTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = dto.OilContent,
+            MainComments = dto.Comments
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
+    }
+
+    public async Task<TestResultEntryDto> SaveVarnishPotentialTestAsync(VarnishPotentialTestDto dto)
+    {
+        var testReading = new TestReading
+        {
+            SampleId = dto.SampleId,
+            TestId = dto.TestId,
+            TrialNumber = dto.TrialNumber,
+            Status = dto.Status,
+            EntryDate = DateTime.UtcNow,
+            EntryId = dto.EntryId,
+            Value1 = dto.VarnishPotential,
+            MainComments = dto.Comments
+        };
+
+        _context.TestReadings.Add(testReading);
+        await _context.SaveChangesAsync();
+
+        return new TestResultEntryDto
+        {
+            SampleId = testReading.SampleId,
+            TestId = testReading.TestId,
+            TrialNumber = testReading.TrialNumber,
+            Status = testReading.Status,
+            EntryDate = testReading.EntryDate,
+            EntryId = testReading.EntryId
+        };
     }
 }

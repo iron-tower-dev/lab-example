@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
+import { Observable, BehaviorSubject, combineLatest, of } from 'rxjs';
 import { map, tap, switchMap } from 'rxjs/operators';
 import {
     TestResultEntry,
@@ -123,7 +123,7 @@ export class TestResultService {
     }
 
     formatEquipmentDisplay(equipment: Equipment): string {
-        return equipment.displayText || equipment.name;
+        return equipment.displayText || equipment.equipName;
     }
 
     isTestResultValid(entry: TestResultEntry, testId: number): boolean {
@@ -299,13 +299,10 @@ export class TestResultService {
             this.getUserQualificationForTest(testId),
             this.statusManagementService.canPerformAction(action, currentStatus, testId, '')
         ]).pipe(
-            map(([qualification, canPerform]) => {
-                if (!qualification) return false;
-                return this.statusManagementService.canPerformAction(action, currentStatus, testId, qualification).pipe(
-                    map(result => result)
-                );
-            }),
-            switchMap(result => result)
+            switchMap(([qualification, canPerform]) => {
+                if (!qualification) return of(false);
+                return this.statusManagementService.canPerformAction(action, currentStatus, testId, qualification);
+            })
         );
     }
 
@@ -355,23 +352,17 @@ export class TestResultService {
         ]).pipe(
             switchMap(([validationResult, isQualified, status]) => {
                 if (!validationResult.isValid) {
-                    return new Observable(observer => {
-                        observer.next({
-                            success: false,
-                            message: 'Validation failed: ' + validationResult.errors.join(', '),
-                            validationResult
-                        });
-                        observer.complete();
+                    return of({
+                        success: false,
+                        message: 'Validation failed: ' + validationResult.errors.join(', '),
+                        validationResult
                     });
                 }
 
                 if (!isQualified) {
-                    return new Observable(observer => {
-                        observer.next({
-                            success: false,
-                            message: 'User is not qualified for this test'
-                        });
-                        observer.complete();
+                    return of({
+                        success: false,
+                        message: 'User is not qualified for this test'
                     });
                 }
 

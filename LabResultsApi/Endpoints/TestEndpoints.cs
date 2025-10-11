@@ -14,7 +14,7 @@ public static class TestEndpoints
 ;
 
         // Get test information
-        group.MapGet("/{testId:short}", 
+        group.MapGet("/{testId:int}", 
             async (short testId, ITestResultService service) =>
             {
                 var testInfo = await service.GetTestInfoAsync(testId);
@@ -31,7 +31,7 @@ public static class TestEndpoints
             .Produces(500);
 
         // Get comprehensive test information
-        group.MapGet("/{testId:short}/comprehensive", 
+        group.MapGet("/{testId:int}/comprehensive", 
             async (short testId, ITestResultService service) =>
             {
                 var testInfo = await service.GetComprehensiveTestInfoAsync(testId);
@@ -228,6 +228,10 @@ public static class TestEndpoints
             .Produces<FileDataTestDto>(200)
             .Produces(400)
             .Produces(500);
+
+        // Test-specific endpoints group
+        var testSpecificGroup = group.MapGroup("/{testId:int}")
+            .WithTags("Test Specific");
 
         // Simple Result Test (Test ID 110, 270)
         testSpecificGroup.MapPost("/simple-result", 

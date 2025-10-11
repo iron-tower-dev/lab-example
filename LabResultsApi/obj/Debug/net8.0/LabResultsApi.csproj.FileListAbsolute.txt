@@ -1,8 +1,0 @@
-/home/derrick/projects/testing/lab-example/LabResultsApi/obj/Debug/net8.0/LabResultsApi.csproj.AssemblyReference.cache
-/home/derrick/projects/testing/lab-example/LabResultsApi/obj/Debug/net8.0/rpswa.dswa.cache.json
-/home/derrick/projects/testing/lab-example/LabResultsApi/obj/Debug/net8.0/LabResultsApi.GeneratedMSBuildEditorConfig.editorconfig
-/home/derrick/projects/testing/lab-example/LabResultsApi/obj/Debug/net8.0/LabResultsApi.AssemblyInfoInputs.cache
-/home/derrick/projects/testing/lab-example/LabResultsApi/obj/Debug/net8.0/LabResultsApi.AssemblyInfo.cs
-/home/derrick/projects/testing/lab-example/LabResultsApi/obj/Debug/net8.0/LabResultsApi.csproj.CoreCompileInputs.cache
-/home/derrick/projects/testing/lab-example/LabResultsApi/obj/Debug/net8.0/LabResultsApi.MvcApplicationPartsAssemblyInfo.cs
-/home/derrick/projects/testing/lab-example/LabResultsApi/obj/Debug/net8.0/LabResultsApi.MvcApplicationPartsAssemblyInfo.cache

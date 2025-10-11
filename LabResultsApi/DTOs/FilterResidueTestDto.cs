@@ -18,4 +18,5 @@ public class FilterResidueTestDto
     public string? Narrative { get; set; }
     public string? Comments { get; set; }
     public string Status { get; set; } = "S";
+    public string? EntryId { get; set; }
 }

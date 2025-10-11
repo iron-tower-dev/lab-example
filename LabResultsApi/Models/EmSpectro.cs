@@ -2,8 +2,8 @@ namespace LabResultsApi.Models;
 
 public class EmSpectro
 {
-    public int Id { get; set; }
-    public short TestId { get; set; }
+    public int? Id { get; set; }
+    public short? TestId { get; set; }
     public double? Na { get; set; }
     public double? Mo { get; set; }
     public double? Mg { get; set; }
@@ -25,5 +25,5 @@ public class EmSpectro
     public double? Sb { get; set; }
     public double? Zn { get; set; }
     public DateTime? TrialDate { get; set; }
-    public short TrialNum { get; set; }
+    public short? TrialNum { get; set; }
 }

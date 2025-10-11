@@ -28,7 +28,7 @@ public static class EquipmentEndpoints
             .Produces(500);
 
         // Get equipment for a specific test
-        group.MapGet("/test/{testId:short}", 
+        group.MapGet("/test/{testId:int}", 
             async (short testId, IEquipmentService service) =>
             {
                 var equipment = await service.GetEquipmentForTestAsync(testId);

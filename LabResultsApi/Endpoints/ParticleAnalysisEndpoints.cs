@@ -1,6 +1,7 @@
 using LabResultsApi.DTOs;
 using LabResultsApi.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace LabResultsApi.Endpoints;
@@ -40,8 +41,8 @@ public static class ParticleAnalysisEndpoints
             .Produces(500);
 
         // Get particle types for a specific sample and test
-        group.MapGet("/{sampleId:int}/{testId:short}", 
-            async (int sampleId, short testId, IParticleAnalysisService service) =>
+        group.MapGet("/{sampleId:int}/{testId:int}", 
+            async (int sampleId, short testId, [FromServices] IParticleAnalysisService service) =>
             {
                 var particleTypes = await service.GetParticleTypesAsync(sampleId, testId);
                 return Results.Ok(particleTypes);
@@ -53,8 +54,8 @@ public static class ParticleAnalysisEndpoints
             .Produces(500);
 
         // Save particle types for a specific sample and test
-        group.MapPost("/{sampleId:int}/{testId:short}", 
-            async (int sampleId, short testId, List<ParticleTypeDto> particleTypes, IParticleAnalysisService service) =>
+        group.MapPost("/{sampleId:int}/{testId:int}", 
+            async (int sampleId, short testId, List<ParticleTypeDto> particleTypes, [FromServices] IParticleAnalysisService service) =>
             {
                 var result = await service.SaveParticleTypesAsync(sampleId, testId, particleTypes);
                 return Results.Ok(result);
@@ -67,8 +68,8 @@ public static class ParticleAnalysisEndpoints
             .Produces(500);
 
         // Get particle analysis for a specific sample and test
-        group.MapGet("/analysis/{sampleId:int}/{testId:short}", 
-            async (int sampleId, short testId, IParticleAnalysisService service) =>
+        group.MapGet("/analysis/{sampleId:int}/{testId:int}", 
+            async (int sampleId, short testId, [FromServices] IParticleAnalysisService service) =>
             {
                 var analysis = await service.GetParticleAnalysisAsync(sampleId, testId);
                 return Results.Ok(analysis);

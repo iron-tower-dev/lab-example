@@ -14,7 +14,7 @@ public static class UserQualificationEndpoints
 ;
 
         // Get user qualification for a specific test
-        group.MapGet("/{userId}/{testId:short}", 
+        group.MapGet("/{userId}/{testId:int}", 
             async (string userId, short testId, IUserQualificationService service) =>
             {
                 var qualification = await service.GetUserQualificationAsync(userId, testId);
@@ -70,7 +70,7 @@ public static class UserQualificationEndpoints
             .Produces(500);
 
         // Check if user can perform action
-        group.MapGet("/{userId}/{testId:short}/can-perform/{action}", 
+        group.MapGet("/{userId}/{testId:int}/can-perform/{action}", 
             async (string userId, short testId, string action, IUserQualificationService service) =>
             {
                 var canPerform = await service.CanUserPerformActionAsync(userId, testId, action);
@@ -83,7 +83,7 @@ public static class UserQualificationEndpoints
             .Produces(500);
 
         // Get test stand qualifications
-        group.MapGet("/test-stand/{testStandId:short}", 
+        group.MapGet("/test-stand/{testStandId:int}", 
             async (short testStandId, IUserQualificationService service) =>
             {
                 var qualifications = await service.GetTestStandQualificationsAsync(testStandId);

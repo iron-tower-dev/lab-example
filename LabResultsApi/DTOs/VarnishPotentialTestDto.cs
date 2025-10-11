@@ -12,4 +12,6 @@ public class VarnishPotentialTestDto
     public double? VarnishPotentialRating { get; set; }
     public string? Comments { get; set; }
     public string Status { get; set; } = "S";
+    public double? VarnishPotential { get; set; }
+    public string? EntryId { get; set; }
 }
