@@ -3,14 +3,7 @@ namespace LabResultsApi.Models;
 public class ParticleSubTypeCategoryDefinition
 {
     public int Id { get; set; }
-    public string? Name { get; set; }
     public string Description { get; set; } = string.Empty; // NOT NULL in database
-    public int? CategoryId { get; set; }
-    public string? CategoryName { get; set; }
-    public string? Unit { get; set; }
-    public int? MinValue { get; set; }
-    public int? MaxValue { get; set; }
-    public int? DefaultValue { get; set; }
     public string? Active { get; set; } // nvarchar(1) in database, not bool
     public int? SortOrder { get; set; }
 

@@ -46,7 +46,7 @@ public class TestResultService : ITestResultService
 
     public async Task<TestInfoDto?> GetTestInfoAsync(short testId)
     {
-        var test = await _context.Tests.FindAsync(testId);
+        var test = await _context.Tests.FirstOrDefaultAsync(t => t.Id == testId);
         if (test == null) return null;
 
         return new TestInfoDto
@@ -192,7 +192,8 @@ public class TestResultService : ITestResultService
 
         foreach (var entry in saveDto.Entries.Where(e => e.TrialNumber > 0))
         {
-            var existing = await _context.TestReadings.FindAsync(entry.SampleId, entry.TestId, entry.TrialNumber);
+            var existing = await _context.TestReadings
+                .FirstOrDefaultAsync(tr => tr.SampleId == entry.SampleId && tr.TestId == entry.TestId && tr.TrialNumber == entry.TrialNumber);
             
             if (existing == null)
             {
@@ -705,7 +706,7 @@ public class TestResultService : ITestResultService
 
     public async Task<object> GetTestWorkflowAsync(short testId)
     {
-        var test = await _context.Tests.FindAsync(testId);
+        var test = await _context.Tests.FirstOrDefaultAsync(t => t.Id == testId);
         if (test == null) return new { };
 
         return new
@@ -735,7 +736,7 @@ public class TestResultService : ITestResultService
 
     public async Task<object> GetComprehensiveTestInfoAsync(short testId)
     {
-        var test = await _context.Tests.FindAsync(testId);
+        var test = await _context.Tests.FirstOrDefaultAsync(t => t.Id == testId);
         if (test == null) return new { };
 
         return new

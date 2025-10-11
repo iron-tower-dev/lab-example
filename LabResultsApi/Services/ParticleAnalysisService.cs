@@ -28,7 +28,7 @@ public class ParticleAnalysisService : IParticleAnalysisService
             SampleId = pt.SampleId,
             TestId = pt.TestId,
             ParticleTypeDefinitionId = pt.ParticleTypeDefinitionId,
-            ParticleTypeName = pt.ParticleTypeDefinition?.Name ?? "Unknown",
+            ParticleTypeName = pt.ParticleTypeDefinition?.Type ?? "Unknown",
             Status = pt.Status ?? "X",
             Comments = pt.Comments,
             SubTypes = pt.ParticleSubTypes.Select(pst => new ParticleSubTypeDto
@@ -37,7 +37,7 @@ public class ParticleAnalysisService : IParticleAnalysisService
                 TestId = pst.TestId,
                 ParticleTypeDefinitionId = pst.ParticleTypeDefinitionId,
                 ParticleSubTypeCategoryId = pst.ParticleSubTypeCategoryId,
-                CategoryName = pst.ParticleSubTypeCategoryDefinition?.Name ?? "Unknown",
+                CategoryName = pst.ParticleSubTypeCategoryDefinition?.Description ?? "Unknown",
                 Value = pst.Value?.ToString() ?? "0"
             }).ToList()
         }).ToList();
@@ -51,33 +51,43 @@ public class ParticleAnalysisService : IParticleAnalysisService
         return particleTypeDefinitions.Select(ptd => new ParticleTypeCategoryDto
         {
             Id = ptd.Id,
-            Name = ptd.Name ?? "Unknown",
+            Name = ptd.Type,
             Description = ptd.Description,
-            Severity = ptd.Severity ?? "Unknown",
-            Color = ptd.Color ?? "#000000",
-            Texture = ptd.Texture,
-            Composition = ptd.Composition,
-            SizeAve = ptd.SizeAve,
-            SizeMax = ptd.SizeMax,
-            Heat = ptd.Heat
+            // Following properties were removed from model, setting defaults
+            Severity = "Unknown",
+            Color = "#000000",
+            Texture = null,
+            Composition = null,
+            SizeAve = null,
+            SizeMax = null,
+            Heat = null,
+            SortOrder = ptd.SortOrder ?? 0,
+            IsActive = ptd.Active == "Y"
         }).ToList();
     }
 
     public async Task<List<ParticleSubTypeDefinitionDto>> GetParticleSubTypeDefinitionsAsync()
     {
         var subTypeDefinitions = await _context.ParticleSubTypeCategoryDefinitions.ToListAsync();
+        var actualSubTypeDefs = await _context.ParticleSubTypeDefinitions.ToListAsync();
 
         return subTypeDefinitions.Select(std => new ParticleSubTypeDefinitionDto
         {
             Id = std.Id,
-            Name = std.Name ?? "Unknown",
+            Name = std.Description,
             Description = std.Description,
-            CategoryId = std.CategoryId,
-            CategoryName = std.CategoryName ?? "Unknown",
-            Unit = std.Unit,
-            MinValue = std.MinValue,
-            MaxValue = std.MaxValue,
-            DefaultValue = std.DefaultValue
+            // Following properties were removed from model, setting defaults
+            CategoryId = null,
+            CategoryName = std.Description,
+            Unit = null,
+            MinValue = null,
+            MaxValue = null,
+            DefaultValue = null,
+            ParticleSubTypeCategoryId = std.Id,
+            Value = "",
+            SortOrder = std.SortOrder ?? 0,
+            IsActive = std.Active == "Y",
+            CategoryDescription = std.Description
         }).ToList();
     }
 
